@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
+import { useModal } from '@/context/ModalContext'
 
 interface ExtractedProduct {
   type: string
@@ -17,6 +18,7 @@ interface ExcelImportProps {
 export default function ExcelImport({ onImport }: ExcelImportProps) {
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showAlert } = useModal()
 
   const processExcelFile = async (file: File): Promise<ExtractedProduct[]> => {
     return new Promise((resolve, reject) => {
@@ -193,7 +195,7 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
     const isValid = validTypes.includes(file.type) || file.name.match(/\.(xlsx|xls|csv)$/i)
     
     if (!isValid) {
-      alert('Por favor selecciona un archivo Excel válido (.xlsx, .xls, .csv)')
+      showAlert('Por favor selecciona un archivo Excel válido (.xlsx, .xls, .csv)', 'Archivo Inválido')
       return
     }
     
@@ -204,13 +206,13 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
       
       if (extractedProducts.length > 0) {
         onImport(extractedProducts)
-        alert(`${extractedProducts.length} productos detectados en Excel`)
+        showAlert(`${extractedProducts.length} productos detectados en Excel`, 'Éxito')
       } else {
-        alert('No se detectaron productos en el archivo Excel')
+        showAlert('No se detectaron productos en el archivo Excel', 'Advertencia')
       }
     } catch (error) {
       console.error('Error processing Excel:', error)
-      alert('Error al procesar el archivo Excel')
+      showAlert('Error al procesar el archivo Excel', 'Error')
     } finally {
       setLoading(false)
       // Reset file input
@@ -237,7 +239,7 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
       <button
         onClick={handleClick}
         disabled={loading}
-        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 hover:shadow-lg"
+        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-amber-500/20"
       >
         {loading ? (
           <>

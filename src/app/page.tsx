@@ -8,6 +8,7 @@ import AdminPanel from '@/components/AdminPanel'
 import ProductRow from '@/components/ProductRow'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 import { roundToNearest5 } from '@/lib/utils'
+import { useModal } from '@/context/ModalContext'
 
 interface Product {
   id: string
@@ -54,6 +55,9 @@ export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
+  
+  // Modal system
+  const { showAlert, showConfirm, showPrompt } = useModal()
   
   // Usar el hook de datos en tiempo real después de tener isAdmin
   const { data: realtimeData, connectedUsers, updateData, socket } = useRealtimeData(isAdmin ? 'admin' : 'client')
@@ -263,7 +267,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error saving adjustment:', error)
-      alert('Error al guardar el ajuste')
+      showAlert('Error al guardar los ajustes', 'Error')
     }
   }
 
@@ -390,8 +394,10 @@ export default function Home() {
       }
       
       setShowPreviewModal(false)
-      refreshData()
-      alert(`${selectedProducts.length} productos importados correctamente`)
+      setProducts([]) // Optimistic update
+      await showAlert(`✅ ${extractedProducts.filter(p => p.selected).length} productos importados con éxito`, 'Importación Exitosa')
+      setShowPreviewModal(false)
+      setExtractedProducts([])
     } catch (error) {
       console.error('Error importing products:', error)
       alert('Error al importar productos')
@@ -409,6 +415,7 @@ export default function Home() {
         body: JSON.stringify(currentAdjustments)
       })
 
+      await showAlert('Ajustes globales guardados con éxito', 'Éxito')
       console.log('Ajustes globales guardados para', activeTab)
     } catch (error) {
       console.error('Error guardando ajustes globales:', error)
@@ -770,7 +777,7 @@ export default function Home() {
           </button>
           {isAdmin && (
             <button
-              onClick={() => alert('Función de agregar lista en desarrollo')}
+              onClick={() => showAlert('Función de agregar lista en desarrollo', 'Próximamente')}
               className="px-6 py-2 rounded-lg font-medium transition-all bg-green-600/20 text-green-400 hover:bg-green-600/40 border-2 border-green-600/50 border-dashed"
             >
               ➕ Agregar Lista
@@ -781,22 +788,22 @@ export default function Home() {
 
       {/* Lock Button */}
       <button
-        onClick={() => {
+        onClick={async () => {
           if (isAdmin) {
-            if (confirm('¿Cerrar sesión de administrador?')) {
+            if (await showConfirm('¿Cerrar sesión de administrador?', 'Cerrar Sesión')) {
               handleLogout()
             }
           } else {
-            const password = prompt('Contraseña de administrador:')
+            const password = await showPrompt('Contraseña de administrador:', 'Acceso Administrador', '', true)
             if (password === ADMIN_PASSWORD) {
               handleLogin('admin')
-              alert('Acceso concedido - Modo Administrador activado')
-            } else if (password) {
-              alert('Contraseña incorrecta')
+              showAlert('Acceso concedido - Modo Administrador activado', 'Éxito')
+            } else if (password !== null) {
+              showAlert('Contraseña incorrecta', 'Error')
             }
           }
         }}
-        className="fixed top-4 right-4 p-3 rounded-full card-glass hover:bg-white/10 transition-all z-40"
+        className="fixed top-4 right-4 p-3 rounded-full card-glass hover:bg-white/10 z-40 transition-all active:scale-95"
       >
         {isAdmin ? (
           <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -874,7 +881,7 @@ export default function Home() {
                   />
                   <button
                     onClick={saveTaxRate}
-                    className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900"
+                    className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20"
                   >
                     Guardar
                   </button>
@@ -994,7 +1001,7 @@ export default function Home() {
                 <div className="mt-3 text-center">
                   <button
                     onClick={applyBothBasePriceAdjustments}
-                    className="btn-primary px-6 py-2 rounded-lg font-medium text-gray-900"
+                    className="btn-primary px-6 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20"
                   >
                     Aplicar Ambos Ajustes
                   </button>
@@ -1126,7 +1133,7 @@ export default function Home() {
                 />
                 <button
                   onClick={exportToExcel}
-                  className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2"
+                  className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20 flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1189,7 +1196,7 @@ export default function Home() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <button type="submit" className="btn-primary w-full px-4 py-2 rounded-lg font-medium text-gray-900">
+                  <button type="submit" className="btn-primary w-full px-4 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20">
                     Agregar
                   </button>
                 </div>
@@ -1378,13 +1385,13 @@ export default function Home() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600"
+                className="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={deleteProduct}
-                className="flex-1 btn-danger px-4 py-2 rounded-lg font-medium text-white"
+                className="flex-1 btn-danger px-4 py-2 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-red-500/20"
               >
                 Eliminar
               </button>
@@ -1434,18 +1441,18 @@ export default function Home() {
               </table>
             </div>
             
-            <div className="flex gap-3">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowPreviewModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600"
+                className="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={confirmImport}
-                className="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900"
+                className="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20"
               >
-                Importar Seleccionados
+                Confirmar Importación
               </button>
             </div>
           </div>

@@ -35,6 +35,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { ModalProvider } from "@/context/ModalContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,8 +47,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster />
+        <ModalProvider>
+          {children}
+          <Toaster />
+        </ModalProvider>
       </body>
     </html>
   );

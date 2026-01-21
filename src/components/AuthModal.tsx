@@ -145,7 +145,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
             <button
               onClick={handleAdminLogin}
               disabled={isLoading}
-              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50"
+              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50 transition-all shadow-lg hover:shadow-amber-500/20"
             >
               {isLoading ? 'Ingresando...' : 'Ingresar como Admin'}
             </button>
@@ -231,7 +231,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
 
             <button
               onClick={userType === 'worker' ? handleWorkerLogin : handleIdentify}
-              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900"
+              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all shadow-lg hover:shadow-amber-500/20"
             >
               {userType === 'worker' ? 'Acceder como Trabajador' : 'Identificarse'}
             </button>
@@ -260,7 +260,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
 
         <button
           onClick={onClose}
-          className="w-full mt-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+          className="w-full mt-4 px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-all"
         >
           Cancelar
         </button>

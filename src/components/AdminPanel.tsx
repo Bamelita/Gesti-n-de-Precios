@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRealtimeData, ConnectedUser } from '@/hooks/useRealtimeData'
+import { useModal } from '@/context/ModalContext'
 
 interface AdminPanelProps {
   socket: any
@@ -17,6 +18,7 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const { showAlert, showConfirm } = useModal()
 
   const handleChangePassword = () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
@@ -48,24 +50,24 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
     })
   }
 
-  const handleRemoveAdmin = (targetSocketId: string, targetName: string) => {
+  const handleRemoveAdmin = async (targetSocketId: string, targetName: string) => {
     if (!canChangePassword) {
-      alert('No tienes permiso para remover administradores. Solo los administradores principales pueden hacer esto.')
+      showAlert('No tienes permiso para remover administradores. Solo los administradores principales pueden hacer esto.', 'Permiso Denegado')
       return
     }
 
-    if (!confirm(`¿Estás seguro de que quieres remover a ${targetName} como administrador?`)) {
+    if (!await showConfirm(`¿Estás seguro de que quieres remover a ${targetName} como administrador?`, 'Confirmar Eliminación')) {
       return
     }
 
     socket.emit('remove-admin', targetSocketId)
 
     socket.on('remove-admin-success', (msg) => {
-      alert(msg)
+      showAlert(msg, 'Éxito')
     })
 
     socket.on('remove-admin-error', (errorMsg) => {
-      alert(errorMsg)
+      showAlert(errorMsg, 'Error')
     })
   }
 
@@ -128,7 +130,7 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
             </p>
           </div>
         ) : (
-          <div className="text-center text-gray-500 py-4">
+          <div className="text-center text-gray-500 py-4 bg-white/5 rounded-xl border border-white/5">
             <p className="text-sm">No tienes permisos de Administrador Principal</p>
             <p className="text-xs mt-1">Solo los primeros 2 administradores tienen estos permisos</p>
           </div>
@@ -202,11 +204,11 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <button
                   onClick={handleChangePassword}
                   disabled={isLoading}
-                  className="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50"
+                  className="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50 transition-all shadow-lg hover:shadow-amber-500/20"
                 >
                   {isLoading ? 'Cambiando...' : 'Cambiar'}
                 </button>
@@ -216,7 +218,7 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
                     setPasswordForm({ currentPassword: '', newPassword: '' })
                     setMessage('')
                   }}
-                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+                  className="flex-1 px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-all"
                 >
                   Cancelar
                 </button>

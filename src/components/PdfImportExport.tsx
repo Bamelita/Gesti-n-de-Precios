@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { useModal } from '@/context/ModalContext'
 
 interface PdfImportExportProps {
   products: any[]
@@ -13,6 +14,7 @@ interface PdfImportExportProps {
 export default function PdfImportExport({ products, activeTab, onImport }: PdfImportExportProps) {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
+  const { showAlert } = useModal()
 
   // Exportar a PDF
   const exportToPdf = async () => {
@@ -80,7 +82,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
       
     } catch (error) {
       console.error('Error exporting PDF:', error)
-      alert('Error al exportar PDF')
+      showAlert('Error al exportar PDF', 'Error')
     } finally {
       setIsExporting(false)
     }
@@ -99,7 +101,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
       try {
         // Nota: Importar desde PDF requiere OCR que es complejo
         // Por ahora, mostramos un mensaje explicativo
-        alert('Para importar desde PDF, se requiere un servicio de OCR.\nPor ahora, puedes usar la importación desde Excel que es más precisa.')
+        showAlert('Para importar desde PDF, se requiere un servicio de OCR.\nPor ahora, puedes usar la importación desde Excel que es más precisa.', 'Información')
         
         // Si quisieras implementar OCR, podrías usar servicios como:
         // - Google Cloud Vision API
@@ -108,7 +110,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
         
       } catch (error) {
         console.error('Error importing PDF:', error)
-        alert('Error al importar PDF')
+        showAlert('Error al importar PDF', 'Error')
       } finally {
         setIsImporting(false)
       }
@@ -121,7 +123,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
       <button
         onClick={importFromPdf}
         disabled={isImporting}
-        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 hover:shadow-lg"
+        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-amber-500/20"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -132,7 +134,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
       <button
         onClick={exportToPdf}
         disabled={isExporting || products.length === 0}
-        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 hover:shadow-lg"
+        className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg hover:shadow-amber-500/20"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
