@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import ExcelImport from '@/components/ExcelImport'
+import PdfImportExport from '@/components/PdfImportExport'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 
 interface Product {
@@ -45,7 +46,7 @@ interface CustomList {
 
 export default function Home() {
   // Usar el hook de datos en tiempo real
-  const { data: realtimeData, isConnected, updateData } = useRealtimeData()
+  const { data: realtimeData, connectedUsers, updateData } = useRealtimeData(isAdmin ? 'admin' : 'client')
   
   // Estados locales
   const [products, setProducts] = useState<Product[]>([])
@@ -679,17 +680,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg text-white p-4 md:p-6">
-      {/* Realtime Connection Indicator */}
-      <div className="fixed top-4 left-4 z-40">
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-          isConnected 
-            ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
-            : 'bg-red-500/20 text-red-400 border border-red-500/50'
-        }`}>
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
-          {isConnected ? 'Tiempo Real' : 'Desconectado'}
-        </div>
-      </div>
       <style jsx>{`
         .gradient-bg {
           background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -815,6 +805,33 @@ export default function Home() {
           {showConfigPanel && (
             <div className="card-glass rounded-2xl p-4 md:p-6 mt-4">
               <h2 className="text-lg font-semibold text-amber-400 mb-4">Configuración Global</h2>
+              
+              {/* Connected Users - Admin Only */}
+              {isAdmin && connectedUsers.length > 0 && (
+                <div className="mb-6 border-t border-white/10 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Usuarios Conectados ({connectedUsers.length})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {connectedUsers.map((user, index) => (
+                      <div key={user.id} className="flex items-center gap-2 p-2 rounded bg-white/5">
+                        <div className={`w-2 h-2 rounded-full ${
+                          user.userType === 'admin' ? 'bg-red-400' :
+                          user.userType === 'worker' ? 'bg-blue-400' : 'bg-green-400'
+                        }`}></div>
+                        <span className="text-xs">
+                          {user.userType === 'admin' ? '👑 Admin' :
+                           user.userType === 'worker' ? '👷 Trabajador' : '👤 Cliente'}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(user.connectedAt).toLocaleTimeString('es-VE', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {/* Tax Config */}
               <div className="mb-6">
@@ -1076,6 +1093,11 @@ export default function Home() {
               
               <div className="mb-4 flex gap-2 flex-wrap">
                 <ExcelImport onImport={importProducts} />
+                <PdfImportExport 
+                  products={products} 
+                  activeTab={activeTab} 
+                  onImport={importProducts}
+                />
                 <button
                   onClick={exportToExcel}
                   className="btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all flex items-center gap-2"
@@ -1220,7 +1242,15 @@ export default function Home() {
                         <td key={type} className="py-3 px-2 text-right">
                           <div className="text-xs text-gray-500 mb-0.5">Base: ${basePrice.toFixed(2)}</div>
                           <div className={`text-lg mb-0.5 font-bold ${adjustment > 0 ? 'price-up' : adjustment < 0 ? 'price-down' : 'text-gray-400'}`}>
-                            {(adjustment >= 0 ? '+' : '')}{adjustment}%: ${(basePrice * (1 + adjustment / 100)).toFixed(2)}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${
+                              adjustment > 0 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+                                : adjustment < 0 
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                  : 'bg-gray-500/20 text-gray-400 border border-gray-500/50'
+                            }`}>
+                              {(adjustment >= 0 ? '+' : '')}{adjustment}%
+                            </span>
                             {isIndividual && <span className="text-amber-400 ml-1" title="Ajuste individual">●</span>}
                           </div>
                           <div className="font-mono text-xs font-medium text-white">+IVA: ${finalPrice.toFixed(2)}</div>

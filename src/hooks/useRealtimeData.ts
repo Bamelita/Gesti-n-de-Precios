@@ -31,14 +31,23 @@ interface Setting {
   updatedAt: string
 }
 
+interface ConnectedUser {
+  id: string
+  socketId: string
+  userType: 'admin' | 'client' | 'worker'
+  connectedAt: string
+  lastActivity: string
+}
+
 interface RealtimeData {
   products: Product[]
   settings: Setting[]
 }
 
-export function useRealtimeData() {
+export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'client') {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [data, setData] = useState<RealtimeData>({ products: [], settings: [] })
+  const [connectedUsers, setConnectedUsers] = useState<ConnectedUser[]>([])
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
@@ -50,8 +59,17 @@ export function useRealtimeData() {
     newSocket.on('connect', () => {
       console.log('Connected to realtime service')
       setIsConnected(true)
+      
+      // Identify user
+      newSocket.emit('identify-user', { userType })
+      
       // Request current data when connected
       newSocket.emit('request-current-data')
+      
+      // Request user list if admin
+      if (userType === 'admin') {
+        newSocket.emit('request-user-list')
+      }
     })
 
     newSocket.on('disconnect', () => {
@@ -67,12 +85,28 @@ export function useRealtimeData() {
       }))
     })
 
+    // Listen for user list updates (admin only)
+    if (userType === 'admin') {
+      newSocket.on('user-list', (users: ConnectedUser[]) => {
+        console.log('Received user list:', users)
+        setConnectedUsers(users)
+      })
+    }
+
+    // Send activity updates
+    const activityInterval = setInterval(() => {
+      if (newSocket.connected) {
+        newSocket.emit('activity')
+      }
+    }, 30000) // Every 30 seconds
+
     setSocket(newSocket)
 
     return () => {
+      clearInterval(activityInterval)
       newSocket.close()
     }
-  }, [])
+  }, [userType])
 
   const updateData = useCallback((type: 'products' | 'settings', newData: any) => {
     setData(prevData => ({
@@ -84,6 +118,7 @@ export function useRealtimeData() {
   return {
     socket,
     data,
+    connectedUsers,
     isConnected,
     updateData
   }

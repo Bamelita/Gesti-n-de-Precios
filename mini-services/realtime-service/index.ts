@@ -16,12 +16,36 @@ const io = new Server(httpServer, {
 
 const PORT = 3001
 
-// Store connected clients
-const connectedClients = new Set()
+// Store connected users with their info
+interface ConnectedUser {
+  id: string
+  socketId: string
+  userType: 'admin' | 'client' | 'worker'
+  connectedAt: Date
+  lastActivity: Date
+}
+
+const connectedUsers = new Map<string, ConnectedUser>()
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
-  connectedClients.add(socket.id)
+  
+  // When user identifies themselves
+  socket.on('identify-user', (userData: { userType: 'admin' | 'client' | 'worker' }) => {
+    const user: ConnectedUser = {
+      id: socket.id,
+      socketId: socket.id,
+      userType: userData.userType,
+      connectedAt: new Date(),
+      lastActivity: new Date()
+    }
+    
+    connectedUsers.set(socket.id, user)
+    console.log(`User identified: ${userData.userType} - ${socket.id}`)
+    
+    // Send updated user list to all admins
+    broadcastUserList()
+  })
 
   // Send current data when client connects
   socket.on('request-current-data', async () => {
@@ -40,15 +64,45 @@ io.on('connection', (socket) => {
     }
   })
 
+  // Request user list (admin only)
+  socket.on('request-user-list', () => {
+    const user = connectedUsers.get(socket.id)
+    if (user && user.userType === 'admin') {
+      socket.emit('user-list', Array.from(connectedUsers.values()))
+    }
+  })
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id)
-    connectedClients.delete(socket.id)
+    connectedUsers.delete(socket.id)
+    broadcastUserList()
+  })
+
+  // Update last activity
+  socket.on('activity', () => {
+    const user = connectedUsers.get(socket.id)
+    if (user) {
+      user.lastActivity = new Date()
+    }
   })
 })
 
+// Function to broadcast user list to admins
+function broadcastUserList() {
+  const admins = Array.from(connectedUsers.values()).filter(user => user.userType === 'admin')
+  const userList = Array.from(connectedUsers.values())
+  
+  admins.forEach(admin => {
+    const socket = io.sockets.sockets.get(admin.socketId)
+    if (socket) {
+      socket.emit('user-list', userList)
+    }
+  })
+}
+
 // Function to broadcast updates to all connected clients
 export function broadcastUpdate(type: string, data: any) {
-  console.log(`Broadcasting ${type} update to ${connectedClients.size} clients`)
+  console.log(`Broadcasting ${type} update to ${connectedUsers.size} clients`)
   io.emit('data-update', { type, [type]: data })
 }
 
@@ -83,4 +137,4 @@ httpServer.listen(PORT, () => {
 })
 
 // Export for potential external use
-export { io, connectedClients }
+export { io, connectedUsers }
