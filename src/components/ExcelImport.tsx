@@ -122,9 +122,9 @@ export default function ExcelImport({ onImport }: ExcelImportProps) {
               const row = jsonData[i]
               if (!Array.isArray(row) || row.length === 0) continue
               
-              let type = null
-              let medida = null
-              let precio = null
+              let type: string | null = null
+              let medida: string | null = null
+              let precio: number | null = null
               
               // Try to identify each cell
               for (const cell of row) {

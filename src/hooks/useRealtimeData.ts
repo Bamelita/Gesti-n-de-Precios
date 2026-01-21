@@ -35,6 +35,8 @@ interface ConnectedUser {
   id: string
   socketId: string
   userType: 'admin' | 'client' | 'worker'
+  name?: string
+  lastName?: string
   connectedAt: string
   lastActivity: string
 }
@@ -99,6 +101,11 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
         newSocket.emit('activity')
       }
     }, 30000) // Every 30 seconds
+
+    newSocket.on('admin-privileges-removed', (message: string) => {
+      alert(message)
+      window.location.reload() // Force reload to reset application state
+    })
 
     setSocket(newSocket)
 

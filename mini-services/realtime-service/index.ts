@@ -33,7 +33,7 @@ const connectedUsers = new Map<string, ConnectedUser>()
 const adminCredentials = {
   password: 'Chirica001*',
   maxPasswordChangers: 2,
-  passwordChangers: [] as string[] // Socket IDs of admins who can change password
+  superAdmins: [] as { name: string, lastName: string }[] // Persistent super admins by name
 }
 
 io.on('connection', (socket) => {
@@ -76,11 +76,18 @@ io.on('connection', (socket) => {
       }
       
       connectedUsers.set(socket.id, user)
+      const isSuperAdmin = adminCredentials.superAdmins.length < adminCredentials.maxPasswordChangers || 
+                          adminCredentials.superAdmins.some(sa => sa.name === credentials.name && sa.lastName === credentials.lastName)
+
+      if (isSuperAdmin && !adminCredentials.superAdmins.some(sa => sa.name === credentials.name && sa.lastName === credentials.lastName)) {
+        adminCredentials.superAdmins.push({ name: credentials.name, lastName: credentials.lastName })
+      }
+
       socket.emit('admin-login-success', { 
         user: {
           name: user.name,
           lastName: user.lastName,
-          canChangePassword: adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || adminCredentials.passwordChangers.includes(socket.id)
+          canChangePassword: isSuperAdmin
         }
       })
       
@@ -99,12 +106,11 @@ io.on('connection', (socket) => {
       return
     }
 
-    // Check if user can change password
-    const canChange = adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || 
-                      adminCredentials.passwordChangers.includes(socket.id)
+    // Check if user is super admin
+    const isSuperAdmin = adminCredentials.superAdmins.some(sa => sa.name === user.name && sa.lastName === user.lastName)
     
-    if (!canChange) {
-      socket.emit('password-change-error', 'No tienes permiso para cambiar la contraseña')
+    if (!isSuperAdmin) {
+      socket.emit('password-change-error', 'Solo los administradores principales pueden cambiar la contraseña')
       return
     }
 
@@ -116,10 +122,7 @@ io.on('connection', (socket) => {
     // Change password
     adminCredentials.password = data.newPassword
     
-    // Add to password changers if not already there
-    if (!adminCredentials.passwordChangers.includes(socket.id)) {
-      adminCredentials.passwordChangers.push(socket.id)
-    }
+
     
     socket.emit('password-change-success', 'Contraseña actualizada correctamente')
     console.log(`Admin ${user.name} ${user.lastName} changed password`)
@@ -133,12 +136,11 @@ io.on('connection', (socket) => {
       return
     }
 
-    // Check if user can remove admins
-    const canRemove = adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || 
-                     adminCredentials.passwordChangers.includes(socket.id)
+    // Check if user is super admin
+    const isSuperAdmin = adminCredentials.superAdmins.some(sa => sa.name === currentUser.name && sa.lastName === currentUser.lastName)
     
-    if (!canRemove) {
-      socket.emit('remove-admin-error', 'No tienes permiso para remover administradores')
+    if (!isSuperAdmin) {
+      socket.emit('remove-admin-error', 'Solo los administradores principales pueden remover a otros')
       return
     }
 

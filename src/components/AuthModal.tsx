@@ -56,19 +56,36 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
     }
   }
 
-  const handleIdentify = () => {
-    if (!formData.name && userType !== 'client') {
-      setError('Por favor ingresa tu nombre')
+  const handleWorkerLogin = () => {
+    if (!formData.name || !formData.lastName || !formData.password) {
+      setError('Nombre, Apellido y Clave son obligatorios para trabajadores')
+      return
+    }
+
+    if (formData.password !== 'Chirica001*') {
+      setError('Clave de trabajador incorrecta')
       return
     }
 
     currentSocket.emit('identify-user', {
-      userType,
+      userType: 'worker',
+      name: formData.name,
+      lastName: formData.lastName
+    })
+
+    onLogin('worker', { name: formData.name, lastName: formData.lastName })
+    onClose()
+  }
+
+  const handleIdentify = () => {
+    // Para clientes, el nombre es opcional
+    currentSocket.emit('identify-user', {
+      userType: 'client',
       name: formData.name || undefined,
       lastName: formData.lastName || undefined
     })
 
-    onLogin(userType, { name: formData.name, lastName: formData.lastName })
+    onLogin('client', { name: formData.name, lastName: formData.lastName })
     onClose()
   }
 
@@ -152,7 +169,10 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
               <label className="block text-sm text-gray-400 mb-1">Tipo de Usuario</label>
               <select
                 value={userType}
-                onChange={(e) => setUserType(e.target.value as any)}
+                onChange={(e) => {
+                  setUserType(e.target.value as any)
+                  setError('')
+                }}
                 className="input-dark rounded-lg px-3 py-2 w-full text-white"
               >
                 <option value="client">Cliente</option>
@@ -160,31 +180,48 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
               </select>
             </div>
 
-            {(userType === 'worker' || userType === 'admin') && (
-              <>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Nombre</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="input-dark rounded-lg px-3 py-2 w-full text-white"
-                    placeholder="Tu nombre"
-                  />
-                </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Nombre {userType === 'worker' && <span className="text-red-400">*</span>}
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                  placeholder="Tu nombre"
+                />
+              </div>
 
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">
+                  Apellido {userType === 'worker' && <span className="text-red-400">*</span>}
+                </label>
+                <input
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                  placeholder="Tu apellido"
+                />
+              </div>
+
+              {userType === 'worker' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Apellido</label>
+                  <label className="block text-sm text-gray-400 mb-1">
+                    Clave de Acceso <span className="text-red-400">*</span>
+                  </label>
                   <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="input-dark rounded-lg px-3 py-2 w-full text-white"
-                    placeholder="Tu apellido"
+                    placeholder="Clave"
                   />
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
             {error && (
               <div className="text-red-400 text-sm text-center bg-red-500/10 rounded-lg p-2">
@@ -193,10 +230,10 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
             )}
 
             <button
-              onClick={handleIdentify}
+              onClick={userType === 'worker' ? handleWorkerLogin : handleIdentify}
               className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900"
             >
-              Identificarse
+              {userType === 'worker' ? 'Acceder como Trabajador' : 'Identificarse'}
             </button>
 
             <div className="text-center space-y-2">

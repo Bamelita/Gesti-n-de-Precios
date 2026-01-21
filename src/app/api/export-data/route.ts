@@ -1,11 +1,18 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
   try {
+    const XLSX = require('xlsx')
     const { productType } = await request.json()
     
+    if (!productType) {
+      return NextResponse.json({ error: 'Product type is required' }, { status: 400 })
+    }
+
     const { data: products, error } = await supabase
       .from('products')
       .select('*')
@@ -17,7 +24,7 @@ export async function POST(request: NextRequest) {
     // Crear datos para Excel
     const worksheetData = [
       ['Tipo/Marca', 'Medida', 'Precio Lista (Bs)', 'Precio Lista ($)', 'Ajuste Caucha (%)', 'Ajuste Transferencia (%)', 'Ajuste Divisas (%)', 'Ajuste Personalizado (%)'],
-      ...products.map(product => [
+      ...(products || []).map(product => [
         product.type,
         product.medida,
         product.precioListaBs,
@@ -46,8 +53,8 @@ export async function POST(request: NextRequest) {
         'Content-Disposition': `attachment; filename="${productType}_${new Date().toISOString().split('T')[0]}.xlsx"`
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error exporting to Excel:', error)
-    return NextResponse.json({ error: 'Failed to export to Excel' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to export to Excel', details: error.message }, { status: 500 })
   }
 }

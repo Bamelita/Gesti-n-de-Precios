@@ -49,6 +49,11 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
   }
 
   const handleRemoveAdmin = (targetSocketId: string, targetName: string) => {
+    if (!canChangePassword) {
+      alert('No tienes permiso para remover administradores. Solo los administradores principales pueden hacer esto.')
+      return
+    }
+
     if (!confirm(`¿Estás seguro de que quieres remover a ${targetName} como administrador?`)) {
       return
     }
@@ -119,13 +124,13 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
               Cambiar Contraseña de Admin
             </button>
             <p className="text-xs text-gray-400">
-              Tienes permiso para cambiar la contraseña general de administrador
+              Eres Administrador Principal y puedes cambiar la contraseña general.
             </p>
           </div>
         ) : (
           <div className="text-center text-gray-500 py-4">
-            <p className="text-sm">No tienes permiso para cambiar la contraseña</p>
-            <p className="text-xs mt-1">Máximo 2 administradores pueden cambiar la contraseña</p>
+            <p className="text-sm">No tienes permisos de Administrador Principal</p>
+            <p className="text-xs mt-1">Solo los primeros 2 administradores tienen estos permisos</p>
           </div>
         )}
       </div>

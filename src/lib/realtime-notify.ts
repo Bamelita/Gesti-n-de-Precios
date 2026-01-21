@@ -8,7 +8,7 @@ async function notifyRealtimeUpdate(type: string, data: any) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, data })
     })
-  } catch (error) {
+  } catch (error: any) {
     console.log('Could not notify realtime service:', error.message)
   }
 }

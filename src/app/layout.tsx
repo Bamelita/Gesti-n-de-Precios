@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gestión de Precios",
+  title: "Gestiór de Precios",
   description: "Sistema de control de precios con impuestos y ajustes",
   keywords: ["Precios", "Gestión", "Inventario", "Next.js", "React"],
   authors: [{ name: "Admin" }],
@@ -22,15 +22,15 @@ export const metadata: Metadata = {
     icon: "/favicon.ico", // Assuming a favicon exists or will use default
   },
   openGraph: {
-    title: "Gestión de Precios",
+    title: "Gestiór de Precios",
     description: "Sistema de control de precios con impuestos y ajustes",
     url: "https://gestion-precios.app", // Placeholder
-    siteName: "Gestión de Precios",
+    siteName: "Gestiór de Precios",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gestión de Precios",
+    title: "Gestiór de Precios",
     description: "Sistema de control de precios con impuestos y ajustes",
   },
 };
