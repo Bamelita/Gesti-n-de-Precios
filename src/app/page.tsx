@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import ExcelImport from '@/components/ExcelImport'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
 
 interface Product {
   id: string
@@ -43,6 +44,10 @@ interface CustomList {
 }
 
 export default function Home() {
+  // Usar el hook de datos en tiempo real
+  const { data: realtimeData, isConnected, updateData } = useRealtimeData()
+  
+  // Estados locales
   const [products, setProducts] = useState<Product[]>([])
   const [settings, setSettings] = useState<Setting[]>([])
   const [activeTab, setActiveTab] = useState('cauchos')
@@ -86,12 +91,19 @@ export default function Home() {
 
   const ADMIN_PASSWORD = 'Chirica001*'
 
+  // Actualizar estados cuando cambian los datos en tiempo real
   useEffect(() => {
-    loadData()
-    checkAuth()
-  }, [])
+    if (realtimeData.products) {
+      setProducts(realtimeData.products)
+    }
+    if (realtimeData.settings) {
+      setSettings(realtimeData.settings)
+      loadSettingsFromData(realtimeData.settings)
+    }
+  }, [realtimeData])
 
-  const loadData = async () => {
+  // Función para actualizar datos localmente y notificar cambios
+  const refreshData = useCallback(async () => {
     try {
       const [productsRes, settingsRes] = await Promise.all([
         fetch('/api/products'),
@@ -101,17 +113,23 @@ export default function Home() {
       if (productsRes.ok) {
         const productsData = await productsRes.json()
         setProducts(productsData)
+        updateData('products', productsData)
       }
       
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json()
         setSettings(settingsData)
         loadSettingsFromData(settingsData)
+        updateData('settings', settingsData)
       }
     } catch (error) {
       console.error('Error loading data:', error)
     }
-  }
+  }, [updateData])
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   const loadSettingsFromData = (settingsData: Setting[]) => {
     // Load tax rate
@@ -235,7 +253,7 @@ export default function Home() {
 
       if (response.ok) {
         setAddForm({ type: '', medida: '', precioListaBs: 0, precioListaUsd: 0 })
-        loadData()
+        refreshData()
         alert('Producto agregado correctamente')
       }
     } catch (error) {
@@ -262,7 +280,7 @@ export default function Home() {
 
       if (response.ok) {
         setShowEditModal(false)
-        loadData()
+        refreshData()
         alert('Producto actualizado correctamente')
       }
     } catch (error) {
@@ -281,7 +299,7 @@ export default function Home() {
 
       if (response.ok) {
         setShowDeleteModal(false)
-        loadData()
+        refreshData()
         alert('Producto eliminado correctamente')
       }
     } catch (error) {
@@ -340,7 +358,7 @@ export default function Home() {
       }
       
       setShowPreviewModal(false)
-      loadData()
+      refreshData()
       alert(`${selectedProducts.length} productos importados correctamente`)
     } catch (error) {
       console.error('Error importing products:', error)
@@ -384,7 +402,9 @@ export default function Home() {
   }
 
   const calculatePrice = (basePrice: number, adjustment: number) => {
+    // Aplicar impuesto primero
     const priceWithTax = basePrice * (1 + taxRate / 100)
+    // Luego aplicar ajuste (descuento o incremento)
     const finalPrice = priceWithTax * (1 + adjustment / 100)
     return finalPrice
   }
@@ -395,6 +415,26 @@ export default function Home() {
     return individualAdjustment !== undefined && individualAdjustment !== null 
       ? individualAdjustment 
       : globalAdjustments[product.productType]?.[type] || 0
+  }
+
+  // Función mejorada para calcular todos los precios
+  const calculateAllPrices = (product: Product) => {
+    const prices: Record<string, { base: number; final: number; adjustment: number }> = {}
+    
+    const types = ['cashea', 'transferencia', 'divisas', 'custom']
+    types.forEach(type => {
+      const basePrice = type === 'divisas' ? product.precioListaUsd : product.precioListaBs
+      const adjustment = getEffectiveAdjustment(product, type)
+      const finalPrice = calculatePrice(basePrice, adjustment)
+      
+      prices[type] = {
+        base: basePrice,
+        final: finalPrice,
+        adjustment: adjustment
+      }
+    })
+    
+    return prices
   }
 
   const filteredProducts = products.filter(product => 
@@ -532,7 +572,7 @@ export default function Home() {
         }
         // Guardar precios base en la base de datos
         saveBasePricesToDB()
-        loadData()
+        refreshData()
         alert(`✅ ${updated} precio${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (${sign}${adjustmentPercent}% en ${currencyName})`)
       }
       
@@ -627,7 +667,7 @@ export default function Home() {
         setBasePriceUsd(0)
         // Guardar precios base en la base de datos
         saveBasePricesToDB()
-        loadData()
+        refreshData()
         alert(`✅ ${updated} producto${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (Bs: ${signBs}${adjustmentBs}%, $: ${signUsd}${adjustmentUsd}%)`)
       }
       
@@ -639,6 +679,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg text-white p-4 md:p-6">
+      {/* Realtime Connection Indicator */}
+      <div className="fixed top-4 left-4 z-40">
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
+          isConnected 
+            ? 'bg-green-500/20 text-green-400 border border-green-500/50' 
+            : 'bg-red-500/20 text-red-400 border border-red-500/50'
+        }`}>
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`}></div>
+          {isConnected ? 'Tiempo Real' : 'Desconectado'}
+        </div>
+      </div>
       <style jsx>{`
         .gradient-bg {
           background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);

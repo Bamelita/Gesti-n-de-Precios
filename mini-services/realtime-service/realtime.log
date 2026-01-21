@@ -1,0 +1,2 @@
+$ bun --hot index.ts
+Realtime service running on port 3001

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
+import { notifyRealtimeUpdate } from '@/lib/realtime-notify'
 
 export async function GET() {
   try {
@@ -26,6 +27,11 @@ export async function POST(request: NextRequest) {
     }
     
     const product = await db.createProduct(data)
+    
+    // Notify realtime clients
+    const allProducts = await db.getProducts()
+    notifyRealtimeUpdate('products', allProducts)
+    
     return NextResponse.json(product)
   } catch (error) {
     console.error('Error creating product:', error)
