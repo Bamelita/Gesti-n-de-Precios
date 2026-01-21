@@ -1,107 +1,146 @@
-# Gestión de Precios de Cauchos y Baterías
+# Sistema de Gestión de Precios de Cauchos y Baterías
 
-Aplicación web desarrollada con Next.js 16, TypeScript y Prisma para la gestión de precios de cauchos y baterías con impuestos y ajustes.
+Aplicación web Next.js para gestión dinámica de precios con ajustes globales y base de datos en la nube.
 
-## Características Implementadas
+## 🚀 Características
 
-### ✅ Funcionalidades Principales
-- **Gestión de Productos**: Agregar, editar y eliminar cauchos y baterías
-- **Sistema de Precios**: Soporte para múltiples tipos de precios (Transferencia, Cashea, Divisas, Personalizado)
-- **Ajustes Globales**: Configuración de ajustes porcentuales para cada tipo de precio
-- **Ajustes Individuales**: Posibilidad de sobreescribir ajustes globales por producto
-- **Impuestos**: Configuración de tasa de impuestos aplicable a todos los productos
-- **Autenticación**: Sistema de administrador con contraseña (Chirica001*)
-- **Búsqueda**: Filtrado de productos por tipo o medida
+- ✅ **Gestión de productos** (Cauchos y Baterías)
+- ✅ **Ajustes de precios base** (-5%, -1%, 0, +1%, +5%, +)
+- ✅ **Ajustes globales** por tipo de precio (Cashea, Transferencia, Divisas, Personalizado)
+- ✅ **Importación/Exportación Excel**
+- ✅ **Base de datos en la nube** (Supabase)
+- ✅ **Actualizaciones en tiempo real**
+- ✅ **Responsive design**
+- ✅ **Panel de administrador seguro**
 
-### ✅ Importación y Exportación
-- **Importación desde Excel**: Soporte para archivos .xlsx, .xls y .csv
-- **Exportación a Excel**: Generación de archivos Excel con los productos actuales
-- **Detección Inteligente**: Reconocimiento automático de columnas y datos
+## 🛠️ Stack Tecnológico
 
-### ❌ Funcionalidades Eliminadas
-- **Importación desde PDF**: Removida según solicitud
-- **Importación desde Imágenes**: Removida según solicitud
-- **Reconocimiento OCR**: Removido según solicitud
+- **Frontend**: Next.js 16, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **UI Components**: shadcn/ui
+- **File Processing**: XLSX
 
-## Arquitectura Técnica
+## 📋 Configuración Inicial
 
-### Frontend
-- **Next.js 16** con App Router
-- **TypeScript** para tipado seguro
-- **Tailwind CSS** para estilos
-- **Componentes personalizados** con Glassmorphism
+### 1. Clonar el repositorio
+```bash
+git clone <repository-url>
+cd <project-folder>
+```
 
-### Backend
-- **API Routes** de Next.js
-- **Prisma ORM** para base de datos
-- **SQLite** como base de datos local
-- **XLSX** para manejo de archivos Excel
+### 2. Instalar dependencias
+```bash
+bun install
+```
 
-### Base de Datos
-- **Products**: Almacenamiento de productos con precios y ajustes
-- **Settings**: Configuraciones globales y ajustes
+### 3. Configurar Supabase
+1. Crea una cuenta en [https://supabase.com](https://supabase.com)
+2. Crea un nuevo proyecto
+3. Copia las credenciales (Project URL y anon key)
+4. Ejecuta el schema SQL (`supabase-schema.sql`) en el SQL Editor de Supabase
 
-## Estructura del Proyecto
+### 4. Configurar variables de entorno
+Crea un archivo `.env` con:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+```
+
+### 5. Iniciar desarrollo
+```bash
+bun run dev
+```
+
+Visita `http://localhost:3000` para ver la aplicación.
+
+## 🌐 Despliegue en Producción
+
+### Opción 1: Vercel (Recomendado)
+1. Crea cuenta en [https://vercel.com](https://vercel.com)
+2. Conecta tu repositorio de GitHub
+3. Configura las variables de entorno en Vercel
+4. Despliega automáticamente
+
+### Opción 2: Netlify
+1. Crea cuenta en [https://netlify.com](https://netlify.com)
+2. Conecta tu repositorio de GitHub
+3. Configura las variables de entorno
+4. Despliega
+
+## 📊 Funcionalidades Principales
+
+### Ajustes de Precios Base
+- **📊 Ajustar Lista (Bs)**: Botones rápidos -5%, -1%, 0, +1%, +5%, +
+- **💵 Ajustar Lista ($)**: Botones rápidos -5%, -1%, 0, +1%, +5%, +
+- Redondeo automático a múltiplos de 5
+- Guardado automático en la nube
+
+### Ajustes Globales
+- **Cashea (Bs)**: Ajuste global para precios en Bolívares
+- **Transferencia (Bs)**: Ajuste para transferencias
+- **Divisas ($)**: Ajuste para precios en dólares
+- **Otro Precio**: Ajuste personalizado
+
+### Gestión de Productos
+- Agregar/editar/eliminar productos
+- Importación masiva desde Excel
+- Exportación a Excel
+- Ajustes individuales por producto
+
+## 🔐 Seguridad
+
+- Panel de administrador con contraseña
+- Contraseña por defecto: `admin123`
+- Las credenciales de Supabase son públicas (solo para lectura/escritura de datos)
+
+## 📁 Estructura del Proyecto
 
 ```
 src/
 ├── app/
-│   ├── api/
-│   │   ├── products/          # CRUD de productos
-│   │   ├── settings/          # Configuraciones
-│   │   └── export/            # Exportación a Excel
-│   ├── components/
-│   │   └── ExcelImport.tsx    # Componente de importación
-│   ├── lib/
-│   │   └── db.ts              # Cliente de Prisma
-│   └── page.tsx               # Página principal
-├── prisma/
-│   └── schema.prisma          # Esquema de base de datos
+│   ├── api/          # API Routes
+│   │   ├── products/
+│   │   └── settings/
+│   ├── components/   # Componentes React
+│   └── page.tsx      # Página principal
+├── lib/
+│   ├── supabase.ts   # Cliente de Supabase
+│   └── db.ts         # Antiguo cliente Prisma (deprecado)
+└── components/
+    └── ui/           # Componentes shadcn/ui
 ```
 
-## Instalación y Uso
+## 🔄 Migración desde SQLite
 
-1. **Instalar dependencias**:
-   ```bash
-   bun install
-   ```
+Si vienes de la versión local con SQLite:
 
-2. **Configurar base de datos**:
-   ```bash
-   bun run db:push
-   bun run db:generate
-   ```
+1. Configura Supabase (ver arriba)
+2. Ejecuta el schema SQL en Supabase
+3. Los datos locales no se migran automáticamente
+4. Deberás重新ingresar los productos
 
-3. **Iniciar desarrollo**:
-   ```bash
-   bun run dev
-   ```
+## 🤝 Contribuir
 
-4. **Acceder a la aplicación**:
-   - URL: http://localhost:3000
-   - Contraseña de administrador: `Chirica001*`
+1. Fork el proyecto
+2. Crea una rama (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-## Características de Seguridad
+## 📄 Licencia
 
-- **Autenticación por contraseña**: Solo los administradores pueden modificar datos
-- **Validación de datos**: Verificación en frontend y backend
-- **Sanitización de entradas**: Protección contra inyección de código
+Este proyecto está bajo la Licencia MIT.
 
-## Mejoras Implementadas
+## 🆘 Soporte
 
-1. **Sin PDF**: Se eliminó completamente la funcionalidad de importación desde PDF
-2. **Exportación Excel**: Botón prominente para exportar datos actuales
-3. **Base de Datos Robusta**: Esquema bien estructurado con Prisma
-4. **TypeScript**: Tipado completo para mayor seguridad
-5. **Responsive Design**: Interfaz adaptable a móviles y escritorio
+Si tienes problemas:
 
-## Tecnologías Utilizadas
+1. Revisa el archivo `SUPABASE_SETUP.md`
+2. Verifica que las variables de entorno estén correctas
+3. Asegúrate de haber ejecutado el schema SQL en Supabase
+4. Revisa la consola del navegador para errores
 
-- **Next.js 16**: Framework React full-stack
-- **TypeScript**: Superset de JavaScript con tipado
-- **Prisma**: ORM moderno para bases de datos
-- **SQLite**: Base de datos ligera y confiable
-- **Tailwind CSS**: Framework de CSS utility-first
-- **XLSX**: Librería para manejo de archivos Excel
+---
 
-La aplicación está lista para producción y cumple con todos los requisitos solicitados.
+**Hecho con ❤️ usando Next.js y Supabase**

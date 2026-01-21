@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const settings = await db.setting.findMany({
-      orderBy: { settingKey: 'asc' }
-    })
+    const settings = await db.getSettings()
     return NextResponse.json(settings)
   } catch (error) {
     console.error('Error fetching settings:', error)
@@ -17,18 +15,12 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    const setting = await db.setting.create({
-      data: {
-        settingKey: data.settingKey,
-        settingValue: data.settingValue,
-        taxRate: data.taxRate,
-        globalCashea: data.globalCashea,
-        globalTransferencia: data.globalTransferencia,
-        globalDivisas: data.globalDivisas,
-        globalCustom: data.globalCustom,
-      }
-    })
+    // Generate ID if not provided
+    if (!data.id) {
+      data.id = `setting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }
     
+    const setting = await db.createSetting(data)
     return NextResponse.json(setting)
   } catch (error) {
     console.error('Error creating setting:', error)

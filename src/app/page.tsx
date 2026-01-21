@@ -77,6 +77,8 @@ export default function Home() {
     precioListaBs: 0,
     precioListaUsd: 0
   })
+  const [basePriceBs, setBasePriceBs] = useState(0)
+  const [basePriceUsd, setBasePriceUsd] = useState(0)
   const [newListForm, setNewListForm] = useState({
     name: '',
     emoji: ''
@@ -147,6 +149,17 @@ export default function Home() {
       }
     })
     setGlobalAdjustments(adjustments)
+
+    // Load base prices
+    const basePriceBsSetting = settingsData.find(s => s.settingKey === 'base_price_bs')
+    const basePriceUsdSetting = settingsData.find(s => s.settingKey === 'base_price_usd')
+    
+    if (basePriceBsSetting) {
+      setBasePriceBs(parseFloat(basePriceBsSetting.settingValue) || 0)
+    }
+    if (basePriceUsdSetting) {
+      setBasePriceUsd(parseFloat(basePriceUsdSetting.settingValue) || 0)
+    }
   }
 
   const checkAuth = () => {
@@ -335,6 +348,41 @@ export default function Home() {
     }
   }
 
+  // Función para guardar ajustes globales en la base de datos
+  const saveGlobalAdjustmentsToDB = async () => {
+    try {
+      const currentAdjustments = globalAdjustments[activeTab] || { cashea: 0, transferencia: 0, divisas: 0, custom: 0 }
+      
+      await fetch('/api/settings/global-adjustments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentAdjustments)
+      })
+
+      console.log('Ajustes globales guardados para', activeTab)
+    } catch (error) {
+      console.error('Error guardando ajustes globales:', error)
+    }
+  }
+
+  // Función para guardar precios base en la base de datos
+  const saveBasePricesToDB = async () => {
+    try {
+      await fetch('/api/settings/base-prices', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          basePriceBs,
+          basePriceUsd
+        })
+      })
+
+      console.log('Precios base guardados')
+    } catch (error) {
+      console.error('Error guardando precios base:', error)
+    }
+  }
+
   const calculatePrice = (basePrice: number, adjustment: number) => {
     const priceWithTax = basePrice * (1 + taxRate / 100)
     const finalPrice = priceWithTax * (1 + adjustment / 100)
@@ -373,6 +421,220 @@ export default function Home() {
   const openDeleteModal = (product: Product) => {
     setSelectedProduct(product)
     setShowDeleteModal(true)
+  }
+
+  const adjustGlobalValue = (type: string, delta: number) => {
+    const newAdjustments = { ...globalAdjustments }
+    newAdjustments[activeTab] = { ...newAdjustments[activeTab], [type]: (globalAdjustments[activeTab]?.[type] || 0) + delta }
+    setGlobalAdjustments(newAdjustments)
+  }
+
+  const adjustBasePriceValue = (currency: string, delta: number) => {
+    if (currency === 'bs') {
+      const newValue = Math.round((basePriceBs + delta) / 5) * 5  // Redondear al múltiplo de 5 más cercano
+      setBasePriceBs(newValue)
+      // Guardar automáticamente
+      setTimeout(() => saveBasePricesToDB(), 100)
+    } else {
+      const newValue = Math.round((basePriceUsd + delta) / 5) * 5  // Redondear al múltiplo de 5 más cercano
+      setBasePriceUsd(newValue)
+      // Guardar automáticamente
+      setTimeout(() => saveBasePricesToDB(), 100)
+    }
+  }
+
+  async function applyBasePriceAdjustment(currency: string) {
+    const adjustmentPercent = currency === 'bs' ? basePriceBs : basePriceUsd
+    
+    if (adjustmentPercent === 0) {
+      alert('El ajuste es 0%, no hay cambios que aplicar')
+      return
+    }
+    
+    // Confirmation with inline UI
+    const tempDiv = document.createElement('div')
+    tempDiv.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+    const currencyName = currency === 'bs' ? 'Bolívares (Bs)' : 'Dólares ($)'
+    const sign = adjustmentPercent >= 0 ? '+' : ''
+    
+    tempDiv.innerHTML = `
+      <div class="card-glass rounded-2xl p-6 w-full max-w-md text-center">
+        <svg class="w-16 h-16 mx-auto ${adjustmentPercent > 0 ? 'text-green-500' : 'text-red-500'} mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <h3 class="text-xl font-semibold text-white mb-2">¿Ajustar precios base?</h3>
+        <p class="text-gray-300 mb-1">Aplicarás <span class="text-amber-400 font-bold">${sign}${adjustmentPercent}%</span> a todos los precios Lista (${currencyName})</p>
+        <p class="text-gray-400 text-sm mb-4">Esta acción afectará ${filteredProducts.length} productos</p>
+        <p class="text-red-400 text-sm mb-6">⚠️ Este cambio es permanente y modificará los valores base</p>
+        <div class="flex gap-3">
+          <button id="temp-cancel-base" class="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all">Cancelar</button>
+          <button id="temp-confirm-base" class="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all">Confirmar</button>
+        </div>
+      </div>
+    `
+    
+    document.body.appendChild(tempDiv)
+    
+    document.getElementById('temp-cancel-base').addEventListener('click', () => tempDiv.remove())
+    document.getElementById('temp-confirm-base').addEventListener('click', async () => {
+      const confirmBtn = document.getElementById('temp-confirm-base') as HTMLButtonElement
+      confirmBtn.disabled = true
+      confirmBtn.textContent = 'Aplicando...'
+      
+      const productsToUpdate = filteredProducts
+      let updated = 0
+      let errors = 0
+      
+      const multiplier = 1 + (adjustmentPercent / 100)
+      
+      // Helper function to round to nearest 5
+      const roundToNearest5 = (value: number) => {
+        return Math.round(value / 5) * 5
+      }
+      
+      for (const product of productsToUpdate) {
+        const newPriceBs = currency === 'bs' 
+          ? roundToNearest5(product.precioListaBs * multiplier)
+          : product.precioListaBs
+        
+        const newPriceUsd = currency === 'usd'
+          ? roundToNearest5(product.precioListaUsd * multiplier)
+          : product.precioListaUsd
+        
+        try {
+          const response = await fetch(`/api/products/${product.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...product,
+              precioListaBs: newPriceBs,
+              precioListaUsd: newPriceUsd
+            })
+          })
+          
+          if (response.ok) {
+            updated++
+          } else {
+            errors++
+          }
+        } catch (error) {
+          errors++
+        }
+      }
+      
+      tempDiv.remove()
+      
+      if (updated > 0) {
+        if (currency === 'bs') {
+          setBasePriceBs(0)
+        } else {
+          setBasePriceUsd(0)
+        }
+        // Guardar precios base en la base de datos
+        saveBasePricesToDB()
+        loadData()
+        alert(`✅ ${updated} precio${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (${sign}${adjustmentPercent}% en ${currencyName})`)
+      }
+      
+      if (errors > 0) {
+        alert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`)
+      }
+    })
+  }
+
+  async function applyBothBasePriceAdjustments() {
+    const adjustmentBs = basePriceBs
+    const adjustmentUsd = basePriceUsd
+    
+    if (adjustmentBs === 0 && adjustmentUsd === 0) {
+      alert('Ambos ajustes son 0%, no hay cambios que aplicar')
+      return
+    }
+    
+    // Confirmation
+    const tempDiv = document.createElement('div')
+    tempDiv.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+    const signBs = adjustmentBs >= 0 ? '+' : ''
+    const signUsd = adjustmentUsd >= 0 ? '+' : ''
+    
+    tempDiv.innerHTML = `
+      <div class="card-glass rounded-2xl p-6 w-full max-w-md text-center">
+        <svg class="w-16 h-16 mx-auto text-amber-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <h3 class="text-xl font-semibold text-white mb-2">¿Ajustar ambos precios base?</h3>
+        <p class="text-gray-300 mb-2">Aplicarás:</p>
+        <p class="text-gray-300 mb-1">• Lista (Bs): <span class="text-amber-400 font-bold">${signBs}${adjustmentBs}%</span></p>
+        <p class="text-gray-300 mb-4">• Lista ($): <span class="text-amber-400 font-bold">${signUsd}${adjustmentUsd}%</span></p>
+        <p class="text-gray-400 text-sm mb-4">Esta acción afectará ${filteredProducts.length} productos</p>
+        <p class="text-red-400 text-sm mb-6">⚠️ Este cambio es permanente y modificará los valores base</p>
+        <div class="flex gap-3">
+          <button id="temp-cancel-both" class="flex-1 px-4 py-2 rounded-lg font-medium bg-gray-700 hover:bg-gray-600 transition-all">Cancelar</button>
+          <button id="temp-confirm-both" class="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 transition-all">Confirmar</button>
+        </div>
+      </div>
+    `
+    
+    document.body.appendChild(tempDiv)
+    
+    document.getElementById('temp-cancel-both').addEventListener('click', () => tempDiv.remove())
+    document.getElementById('temp-confirm-both').addEventListener('click', async () => {
+      const confirmBtn = document.getElementById('temp-confirm-both') as HTMLButtonElement
+      confirmBtn.disabled = true
+      confirmBtn.textContent = 'Aplicando...'
+      
+      const productsToUpdate = filteredProducts
+      let updated = 0
+      let errors = 0
+      
+      const multiplierBs = 1 + (adjustmentBs / 100)
+      const multiplierUsd = 1 + (adjustmentUsd / 100)
+      
+      // Helper function to round to nearest 5
+      const roundToNearest5 = (value: number) => {
+        return Math.round(value / 5) * 5
+      }
+      
+      for (const product of productsToUpdate) {
+        const newPriceBs = roundToNearest5(product.precioListaBs * multiplierBs)
+        const newPriceUsd = roundToNearest5(product.precioListaUsd * multiplierUsd)
+        
+        try {
+          const response = await fetch(`/api/products/${product.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...product,
+              precioListaBs: newPriceBs,
+              precioListaUsd: newPriceUsd
+            })
+          })
+          
+          if (response.ok) {
+            updated++
+          } else {
+            errors++
+          }
+        } catch (error) {
+          errors++
+        }
+      }
+      
+      tempDiv.remove()
+      
+      if (updated > 0) {
+        setBasePriceBs(0)
+        setBasePriceUsd(0)
+        // Guardar precios base en la base de datos
+        saveBasePricesToDB()
+        loadData()
+        alert(`✅ ${updated} producto${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (Bs: ${signBs}${adjustmentBs}%, $: ${signUsd}${adjustmentUsd}%)`)
+      }
+      
+      if (errors > 0) {
+        alert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`)
+      }
+    })
   }
 
   return (
@@ -528,6 +790,124 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Base Price Adjustments */}
+              <div className="mb-6 border-t border-white/10 pt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-3">Ajuste de Precios Base</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="card-glass rounded-lg p-3">
+                    <label className="block text-xs text-gray-400 mb-2">📊 Ajustar Lista (Bs)</label>
+                    <div className="flex items-center gap-1 mb-2">
+                      <button
+                        onClick={() => adjustBasePriceValue('bs', -5)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-xs font-medium"
+                      >
+                        -5%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('bs', -1)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-xs font-medium"
+                      >
+                        -1%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('bs', -basePriceBs)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-gray-600/20 hover:bg-gray-600/40 border border-gray-600/50 text-xs font-medium"
+                      >
+                        0
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('bs', 1)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-xs font-medium"
+                      >
+                        +1%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('bs', 5)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-xs font-medium"
+                      >
+                        +5%
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newValue = basePriceBs + 5
+                          setBasePriceBs(newValue)
+                          setTimeout(() => saveBasePricesToDB(), 100)
+                        }}
+                        className="px-2 py-1 rounded text-white bg-amber-600/20 hover:bg-amber-600/40 border border-amber-600/50 text-xs font-medium"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-xl font-bold ${basePriceBs > 0 ? 'price-up' : basePriceBs < 0 ? 'price-down' : 'text-amber-400'}`}>
+                        {(basePriceBs >= 0 ? '+' : '')}{basePriceBs}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="card-glass rounded-lg p-3">
+                    <label className="block text-xs text-gray-400 mb-2">💵 Ajustar Lista ($)</label>
+                    <div className="flex items-center gap-1 mb-2">
+                      <button
+                        onClick={() => adjustBasePriceValue('usd', -5)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-xs font-medium"
+                      >
+                        -5%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('usd', -1)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-red-600/20 hover:bg-red-600/40 border border-red-600/50 text-xs font-medium"
+                      >
+                        -1%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('usd', -basePriceUsd)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-gray-600/20 hover:bg-gray-600/40 border border-gray-600/50 text-xs font-medium"
+                      >
+                        0
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('usd', 1)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-xs font-medium"
+                      >
+                        +1%
+                      </button>
+                      <button
+                        onClick={() => adjustBasePriceValue('usd', 5)}
+                        className="flex-1 px-2 py-1 rounded text-white bg-green-600/20 hover:bg-green-600/40 border border-green-600/50 text-xs font-medium"
+                      >
+                        +5%
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newValue = basePriceUsd + 5
+                          setBasePriceUsd(newValue)
+                          setTimeout(() => saveBasePricesToDB(), 100)
+                        }}
+                        className="px-2 py-1 rounded text-white bg-amber-600/20 hover:bg-amber-600/40 border border-amber-600/50 text-xs font-medium"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-xl font-bold ${basePriceUsd > 0 ? 'price-up' : basePriceUsd < 0 ? 'price-down' : 'text-amber-400'}`}>
+                        {(basePriceUsd >= 0 ? '+' : '')}{basePriceUsd}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-center">
+                  <button
+                    onClick={applyBothBasePriceAdjustments}
+                    className="btn-primary px-6 py-2 rounded-lg font-medium text-gray-900"
+                  >
+                    Aplicar Ambos Ajustes
+                  </button>
+                  <p className="text-xs text-amber-400 mt-2">⚠️ Esta acción modificará permanentemente los precios base de todos los productos en esta lista</p>
+                </div>
+              </div>
+
               {/* Global Adjustments */}
               <div className="border-t border-white/10 pt-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-3">Ajustes Globales por Tipo de Precio</h3>
@@ -547,6 +927,8 @@ export default function Home() {
                             const newAdjustments = { ...globalAdjustments }
                             newAdjustments[activeTab] = { ...newAdjustments[activeTab], [key]: current - 1 }
                             setGlobalAdjustments(newAdjustments)
+                            // Guardar automáticamente
+                            setTimeout(() => saveGlobalAdjustmentsToDB(), 100)
                           }}
                           className="input-dark px-2 py-1 rounded text-white hover:bg-white/10"
                         >
@@ -561,6 +943,8 @@ export default function Home() {
                             const newAdjustments = { ...globalAdjustments }
                             newAdjustments[activeTab] = { ...newAdjustments[activeTab], [key]: parseFloat(e.target.value) || 0 }
                             setGlobalAdjustments(newAdjustments)
+                            // Guardar automáticamente
+                            setTimeout(() => saveGlobalAdjustmentsToDB(), 100)
                           }}
                           className="input-dark rounded px-2 py-1 w-16 text-white text-sm text-center"
                           step="0.1"
@@ -571,6 +955,8 @@ export default function Home() {
                             const newAdjustments = { ...globalAdjustments }
                             newAdjustments[activeTab] = { ...newAdjustments[activeTab], [key]: current + 1 }
                             setGlobalAdjustments(newAdjustments)
+                            // Guardar automáticamente
+                            setTimeout(() => saveGlobalAdjustmentsToDB(), 100)
                           }}
                           className="input-dark px-2 py-1 rounded text-white hover:bg-white/10"
                         >
@@ -592,6 +978,20 @@ export default function Home() {
                       </div>
                     </div>
                   ))}
+                </div>
+                
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={() => {
+                      // Guardar todos los ajustes globales actuales
+                      saveGlobalAdjustmentsToDB()
+                      alert('✅ Todos los ajustes globales han sido guardados')
+                    }}
+                    className="btn-primary px-6 py-2 rounded-lg font-medium text-gray-900"
+                  >
+                    Aplicar Todos los Ajustes Globales
+                  </button>
+                  <p className="text-xs text-gray-400 mt-2">Los nuevos cauchos heredan automáticamente estos ajustes globales</p>
                 </div>
               </div>
             </div>

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import * as XLSX from 'xlsx'
 
 export async function POST(request: NextRequest) {
   try {
     const { productType } = await request.json()
     
-    const products = await db.product.findMany({
-      where: { productType },
-      orderBy: { createdAt: 'desc' }
-    })
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('productType', productType)
+      .order('createdAt', { ascending: false })
+    
+    if (error) throw error
 
     // Crear datos para Excel
     const worksheetData = [

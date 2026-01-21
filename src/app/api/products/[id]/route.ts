@@ -1,27 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db } from '@/lib/supabase'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const data = await request.json()
     
-    const product = await db.product.update({
-      where: { id: params.id },
-      data: {
-        type: data.type,
-        medida: data.medida,
-        precioListaBs: data.precioListaBs,
-        precioListaUsd: data.precioListaUsd,
-        adjustmentCashea: data.adjustmentCashea,
-        adjustmentTransferencia: data.adjustmentTransferencia,
-        adjustmentDivisas: data.adjustmentDivisas,
-        adjustmentCustom: data.adjustmentCustom,
-      }
-    })
-    
+    const product = await db.updateProduct(id, data)
     return NextResponse.json(product)
   } catch (error) {
     console.error('Error updating product:', error)
@@ -31,12 +19,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await db.product.delete({
-      where: { id: params.id }
-    })
+    const { id } = await params
+    
+    await db.deleteProduct(id)
     
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db } from '@/lib/supabase'
 
 export async function GET() {
   try {
-    const products = await db.product.findMany({
-      orderBy: { createdAt: 'desc' }
-    })
+    const products = await db.getProducts()
     return NextResponse.json(products)
   } catch (error) {
     console.error('Error fetching products:', error)
@@ -17,20 +15,17 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     
-    const product = await db.product.create({
-      data: {
-        productType: data.productType || 'cauchos',
-        type: data.type,
-        medida: data.medida,
-        precioListaBs: data.precioListaBs,
-        precioListaUsd: data.precioListaUsd,
-        adjustmentCashea: data.adjustmentCashea,
-        adjustmentTransferencia: data.adjustmentTransferencia,
-        adjustmentDivisas: data.adjustmentDivisas,
-        adjustmentCustom: data.adjustmentCustom,
-      }
-    })
+    // Generate ID if not provided
+    if (!data.id) {
+      data.id = `product_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }
     
+    // Ensure required fields
+    if (!data.type || !data.medida) {
+      return NextResponse.json({ error: 'Type and medida are required' }, { status: 400 })
+    }
+    
+    const product = await db.createProduct(data)
     return NextResponse.json(product)
   } catch (error) {
     console.error('Error creating product:', error)
