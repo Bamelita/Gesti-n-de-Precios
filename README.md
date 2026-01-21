@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Sistema de Gestión de Precios de Cauchos y Baterías
 
 Aplicación web Next.js para gestión dinámica de precios con ajustes globales y base de datos en la nube.
@@ -144,3 +145,6 @@ Si tienes problemas:
 ---
 
 **Hecho con ❤️ usando Next.js y Supabase**
+=======
+# Gesti-n-de-Precios
+>>>>>>> e7e34a8bbc8f033df97d7a55259fb8cd505809a2
