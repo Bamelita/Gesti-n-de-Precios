@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRealtimeData } from '@/hooks/useRealtimeData'
+import { useRealtimeData, ConnectedUser } from '@/hooks/useRealtimeData'
 
 interface AdminPanelProps {
   socket: any

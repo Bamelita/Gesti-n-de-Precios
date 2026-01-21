@@ -31,7 +31,7 @@ interface Setting {
   updatedAt: string
 }
 
-interface ConnectedUser {
+export interface ConnectedUser {
   id: string
   socketId: string
   userType: 'admin' | 'client' | 'worker'
