@@ -14,24 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "Gestión de Precios",
+  description: "Sistema de control de precios con impuestos y ajustes",
+  keywords: ["Precios", "Gestión", "Inventario", "Next.js", "React"],
+  authors: [{ name: "Admin" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.ico", // Assuming a favicon exists or will use default
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "Gestión de Precios",
+    description: "Sistema de control de precios con impuestos y ajustes",
+    url: "https://gestion-precios.app", // Placeholder
+    siteName: "Gestión de Precios",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "Gestión de Precios",
+    description: "Sistema de control de precios con impuestos y ajustes",
   },
 };
 

@@ -179,10 +179,10 @@ export default function Home() {
     const basePriceUsdSetting = settingsData.find(s => s.settingKey === 'base_price_usd')
     
     if (basePriceBsSetting) {
-      setBasePriceBs(parseFloat(basePriceBsSetting.settingValue) || 0)
+      setBasePriceBs(parseFloat(basePriceBsSetting.settingValue || '0') || 0)
     }
     if (basePriceUsdSetting) {
-      setBasePriceUsd(parseFloat(basePriceUsdSetting.settingValue) || 0)
+      setBasePriceUsd(parseFloat(basePriceUsdSetting.settingValue || '0') || 0)
     }
   }
 
@@ -545,9 +545,9 @@ export default function Home() {
     
     document.body.appendChild(tempDiv)
     
-    document.getElementById('temp-cancel-base').addEventListener('click', () => tempDiv.remove())
-    document.getElementById('temp-confirm-base').addEventListener('click', async () => {
-      const confirmBtn = document.getElementById('temp-confirm-base') as HTMLButtonElement
+    document.getElementById('temp-cancel-base')!.addEventListener('click', () => tempDiv.remove())
+    document.getElementById('temp-confirm-base')!.addEventListener('click', async () => {
+      const confirmBtn = document.getElementById('temp-confirm-base')! as HTMLButtonElement
       confirmBtn.disabled = true
       confirmBtn.textContent = 'Aplicando...'
       
@@ -647,9 +647,9 @@ export default function Home() {
     
     document.body.appendChild(tempDiv)
     
-    document.getElementById('temp-cancel-both').addEventListener('click', () => tempDiv.remove())
-    document.getElementById('temp-confirm-both').addEventListener('click', async () => {
-      const confirmBtn = document.getElementById('temp-confirm-both') as HTMLButtonElement
+    document.getElementById('temp-cancel-both')!.addEventListener('click', () => tempDiv.remove())
+    document.getElementById('temp-confirm-both')!.addEventListener('click', async () => {
+      const confirmBtn = document.getElementById('temp-confirm-both')! as HTMLButtonElement
       confirmBtn.disabled = true
       confirmBtn.textContent = 'Aplicando...'
       
@@ -788,11 +788,12 @@ export default function Home() {
         onClick={() => {
           if (isAdmin) {
             if (confirm('¿Cerrar sesión de administrador?')) {
-              logout()
+              handleLogout()
             }
           } else {
             const password = prompt('Contraseña de administrador:')
-            if (password && login(password)) {
+            if (password === ADMIN_PASSWORD) {
+              handleLogin('admin')
               alert('Acceso concedido - Modo Administrador activado')
             } else if (password) {
               alert('Contraseña incorrecta')
