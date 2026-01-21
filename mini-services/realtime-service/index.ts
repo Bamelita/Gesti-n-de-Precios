@@ -21,30 +21,146 @@ interface ConnectedUser {
   id: string
   socketId: string
   userType: 'admin' | 'client' | 'worker'
+  name?: string
+  lastName?: string
   connectedAt: Date
   lastActivity: Date
 }
 
 const connectedUsers = new Map<string, ConnectedUser>()
 
+// Store admin credentials (in production, this should be in a secure database)
+const adminCredentials = {
+  password: 'Chirica001*',
+  maxPasswordChangers: 2,
+  passwordChangers: [] as string[] // Socket IDs of admins who can change password
+}
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
   
   // When user identifies themselves
-  socket.on('identify-user', (userData: { userType: 'admin' | 'client' | 'worker' }) => {
+  socket.on('identify-user', (userData: { 
+    userType: 'admin' | 'client' | 'worker',
+    name?: string,
+    lastName?: string 
+  }) => {
     const user: ConnectedUser = {
       id: socket.id,
       socketId: socket.id,
       userType: userData.userType,
+      name: userData.name,
+      lastName: userData.lastName,
       connectedAt: new Date(),
       lastActivity: new Date()
     }
     
     connectedUsers.set(socket.id, user)
-    console.log(`User identified: ${userData.userType} - ${socket.id}`)
+    console.log(`User identified: ${userData.userType} - ${userData.name || ''} ${userData.lastName || ''} - ${socket.id}`)
     
     // Send updated user list to all admins
     broadcastUserList()
+  })
+
+  // Admin authentication
+  socket.on('admin-login', (credentials: { name: string, lastName: string, password: string }) => {
+    if (credentials.password === adminCredentials.password) {
+      const user: ConnectedUser = {
+        id: socket.id,
+        socketId: socket.id,
+        userType: 'admin',
+        name: credentials.name,
+        lastName: credentials.lastName,
+        connectedAt: new Date(),
+        lastActivity: new Date()
+      }
+      
+      connectedUsers.set(socket.id, user)
+      socket.emit('admin-login-success', { 
+        user: {
+          name: user.name,
+          lastName: user.lastName,
+          canChangePassword: adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || adminCredentials.passwordChangers.includes(socket.id)
+        }
+      })
+      
+      console.log(`Admin logged in: ${credentials.name} ${credentials.lastName}`)
+      broadcastUserList()
+    } else {
+      socket.emit('admin-login-error', 'Contraseña incorrecta')
+    }
+  })
+
+  // Change admin password
+  socket.on('change-admin-password', (data: { currentPassword: string, newPassword: string }) => {
+    const user = connectedUsers.get(socket.id)
+    if (!user || user.userType !== 'admin') {
+      socket.emit('password-change-error', 'No autorizado')
+      return
+    }
+
+    // Check if user can change password
+    const canChange = adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || 
+                      adminCredentials.passwordChangers.includes(socket.id)
+    
+    if (!canChange) {
+      socket.emit('password-change-error', 'No tienes permiso para cambiar la contraseña')
+      return
+    }
+
+    if (data.currentPassword !== adminCredentials.password) {
+      socket.emit('password-change-error', 'Contraseña actual incorrecta')
+      return
+    }
+
+    // Change password
+    adminCredentials.password = data.newPassword
+    
+    // Add to password changers if not already there
+    if (!adminCredentials.passwordChangers.includes(socket.id)) {
+      adminCredentials.passwordChangers.push(socket.id)
+    }
+    
+    socket.emit('password-change-success', 'Contraseña actualizada correctamente')
+    console.log(`Admin ${user.name} ${user.lastName} changed password`)
+  })
+
+  // Remove admin
+  socket.on('remove-admin', (targetSocketId: string) => {
+    const currentUser = connectedUsers.get(socket.id)
+    if (!currentUser || currentUser.userType !== 'admin') {
+      socket.emit('remove-admin-error', 'No autorizado')
+      return
+    }
+
+    // Check if user can remove admins
+    const canRemove = adminCredentials.passwordChangers.length < adminCredentials.maxPasswordChangers || 
+                     adminCredentials.passwordChangers.includes(socket.id)
+    
+    if (!canRemove) {
+      socket.emit('remove-admin-error', 'No tienes permiso para remover administradores')
+      return
+    }
+
+    const targetUser = connectedUsers.get(targetSocketId)
+    if (!targetUser || targetUser.userType !== 'admin') {
+      socket.emit('remove-admin-error', 'Usuario no encontrado o no es administrador')
+      return
+    }
+
+    // Remove admin privileges
+    targetUser.userType = 'client'
+    connectedUsers.set(targetSocketId, targetUser)
+    
+    // Notify the removed admin
+    const targetSocket = io.sockets.sockets.get(targetSocketId)
+    if (targetSocket) {
+      targetSocket.emit('admin-privileges-removed', 'Se han removido tus privilegios de administrador')
+    }
+    
+    socket.emit('remove-admin-success', 'Administrador removido correctamente')
+    broadcastUserList()
+    console.log(`Admin ${currentUser.name} ${currentUser.lastName} removed admin privileges from ${targetUser.name} ${targetUser.lastName}`)
   })
 
   // Send current data when client connects

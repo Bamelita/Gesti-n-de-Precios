@@ -6,4 +6,57 @@ $ bun --hot index.ts
 User identified: admin - c2F53VEF_mBbjUIjAAAB
 Client connected: Pb0WPpMT_f4vNEuDAAAE
 User identified: admin - Pb0WPpMT_f4vNEuDAAAE
-51:13)
+Client connected: 9Xf9ToqDM9mGciOGAAAG
+User identified: admin - 9Xf9ToqDM9mGciOGAAAG
+Client disconnected: c2F53VEF_mBbjUIjAAAB
+Client disconnected: Pb0WPpMT_f4vNEuDAAAE
+Client connected: m9GRFpv7mxVXZurtAAAI
+User identified: admin - m9GRFpv7mxVXZurtAAAI
+Client disconnected: 9Xf9ToqDM9mGciOGAAAG
+Realtime service running on port 3001
+Realtime service running on port 3001
+Client connected: FH7EghmdqT6cMCMhAAAC
+User identified: client -   - FH7EghmdqT6cMCMhAAAC
+Client connected: 0mWFoPEwhmUiFctjAAAE
+User identified: client -   - 0mWFoPEwhmUiFctjAAAE
+Client disconnected: 0mWFoPEwhmUiFctjAAAE
+Client connected: OZAsH-TYTBFbcgZLAAAG
+User identified: admin -   - OZAsH-TYTBFbcgZLAAAG
+Client disconnected: m9GRFpv7mxVXZurtAAAI
+Client disconnected: OZAsH-TYTBFbcgZLAAAG
+Client disconnected: FH7EghmdqT6cMCMhAAAC
+Client connected: rN4sHT0RA_7nABuxAAAJ
+Client connected: vtTceyvnceszRrQ3AAAK
+User identified: admin -   - rN4sHT0RA_7nABuxAAAJ
+User identified: admin -   - vtTceyvnceszRrQ3AAAK
+Client disconnected: vtTceyvnceszRrQ3AAAK
+Client connected: hzOIgS9E81bTfQLmAAAM
+User identified: admin -   - hzOIgS9E81bTfQLmAAAM
+Client disconnected: rN4sHT0RA_7nABuxAAAJ
+Client connected: BPK8ZiHs6TljsbdoAAAO
+User identified: admin -   - BPK8ZiHs6TljsbdoAAAO
+Client disconnected: hzOIgS9E81bTfQLmAAAM
+Client disconnected: BPK8ZiHs6TljsbdoAAAO
+Client connected: 48ry8hyzGnYBdHKQAAAR
+User identified: admin -   - 48ry8hyzGnYBdHKQAAAR
+Client connected: ltUYrTed6LEaLH9NAAAT
+User identified: admin -   - ltUYrTed6LEaLH9NAAAT
+Client disconnected: 48ry8hyzGnYBdHKQAAAR
+Client connected: SgEuvbbxfOs_c66fAAAV
+User identified: client -   - SgEuvbbxfOs_c66fAAAV
+Client disconnected: SgEuvbbxfOs_c66fAAAV
+Client connected: xF1iC5Op9pwl-YkaAAAX
+User identified: client -   - xF1iC5Op9pwl-YkaAAAX
+Client disconnected: ltUYrTed6LEaLH9NAAAT
+Client connected: PG0hH61sX4iFaRg4AAAZ
+User identified: admin -   - PG0hH61sX4iFaRg4AAAZ
+Client disconnected: xF1iC5Op9pwl-YkaAAAX
+Client connected: Kva6AOOBPGKbTUS9AAAb
+User identified: client -   - Kva6AOOBPGKbTUS9AAAb
+Client disconnected: PG0hH61sX4iFaRg4AAAZ
+Client disconnected: Kva6AOOBPGKbTUS9AAAb
+Client connected: ZDQEskfUIaGzwv2GAAAd
+User identified: admin -   - ZDQEskfUIaGzwv2GAAAd
+Client disconnected: ZDQEskfUIaGzwv2GAAAd
+Client connected: 8e6EW7uHF5D69wwPAAAg
+User identified: client -   - 8e6EW7uHF5D69wwPAAAg

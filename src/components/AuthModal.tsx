@@ -1,0 +1,233 @@
+'use client'
+
+import { useState } from 'react'
+import { useRealtimeData } from '@/hooks/useRealtimeData'
+
+interface AuthModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onLogin: (userType: 'admin' | 'client' | 'worker', userInfo?: any) => void
+  currentSocket: any
+}
+
+export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: AuthModalProps) {
+  const [authMode, setAuthMode] = useState<'login' | 'identify'>('login')
+  const [userType, setUserType] = useState<'admin' | 'client' | 'worker'>('client')
+  const [formData, setFormData] = useState({
+    name: '',
+    lastName: '',
+    password: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  if (!isOpen) return null
+
+  const handleAdminLogin = async () => {
+    if (!formData.name || !formData.lastName || !formData.password) {
+      setError('Por favor completa todos los campos')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+
+    try {
+      currentSocket.emit('admin-login', {
+        name: formData.name,
+        lastName: formData.lastName,
+        password: formData.password
+      })
+
+      // Listen for response
+      currentSocket.on('admin-login-success', (data) => {
+        onLogin('admin', { ...formData, ...data.user })
+        onClose()
+        setIsLoading(false)
+      })
+
+      currentSocket.on('admin-login-error', (errorMsg) => {
+        setError(errorMsg)
+        setIsLoading(false)
+      })
+    } catch (error) {
+      setError('Error de conexión')
+      setIsLoading(false)
+    }
+  }
+
+  const handleIdentify = () => {
+    if (!formData.name && userType !== 'client') {
+      setError('Por favor ingresa tu nombre')
+      return
+    }
+
+    currentSocket.emit('identify-user', {
+      userType,
+      name: formData.name || undefined,
+      lastName: formData.lastName || undefined
+    })
+
+    onLogin(userType, { name: formData.name, lastName: formData.lastName })
+    onClose()
+  }
+
+  const handleGuestAccess = () => {
+    onLogin('client')
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="card-glass rounded-2xl p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold text-white mb-4 text-center">
+          {authMode === 'login' ? 'Acceso de Administrador' : 'Identificación'}
+        </h2>
+
+        {authMode === 'login' ? (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Nombre</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                placeholder="Tu nombre"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Apellido</label>
+              <input
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                placeholder="Tu apellido"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Contraseña de Admin</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                placeholder="Contraseña"
+              />
+            </div>
+
+            {error && (
+              <div className="text-red-400 text-sm text-center bg-red-500/10 rounded-lg p-2">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleAdminLogin}
+              disabled={isLoading}
+              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50"
+            >
+              {isLoading ? 'Ingresando...' : 'Ingresar como Admin'}
+            </button>
+
+            <div className="text-center">
+              <button
+                onClick={() => {
+                  setAuthMode('identify')
+                  setError('')
+                  setFormData({ name: '', lastName: '', password: '' })
+                }}
+                className="text-amber-400 hover:text-amber-300 text-sm"
+              >
+                No soy administrador
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Tipo de Usuario</label>
+              <select
+                value={userType}
+                onChange={(e) => setUserType(e.target.value as any)}
+                className="input-dark rounded-lg px-3 py-2 w-full text-white"
+              >
+                <option value="client">Cliente</option>
+                <option value="worker">Trabajador</option>
+              </select>
+            </div>
+
+            {(userType === 'worker' || userType === 'admin') && (
+              <>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                    placeholder="Tu nombre"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Apellido</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                    placeholder="Tu apellido"
+                  />
+                </div>
+              </>
+            )}
+
+            {error && (
+              <div className="text-red-400 text-sm text-center bg-red-500/10 rounded-lg p-2">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleIdentify}
+              className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-gray-900"
+            >
+              Identificarse
+            </button>
+
+            <div className="text-center space-y-2">
+              <button
+                onClick={() => {
+                  setAuthMode('login')
+                  setError('')
+                  setFormData({ name: '', lastName: '', password: '' })
+                }}
+                className="text-amber-400 hover:text-amber-300 text-sm"
+              >
+                Soy administrador
+              </button>
+              
+              <button
+                onClick={handleGuestAccess}
+                className="text-gray-400 hover:text-gray-300 text-sm"
+              >
+                Continuar como invitado
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="w-full mt-4 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}

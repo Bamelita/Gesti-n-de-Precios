@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import ExcelImport from '@/components/ExcelImport'
 import PdfImportExport from '@/components/PdfImportExport'
+import AuthModal from '@/components/AuthModal'
+import AdminPanel from '@/components/AdminPanel'
 import { useRealtimeData } from '@/hooks/useRealtimeData'
 
 interface Product {
@@ -47,9 +49,12 @@ interface CustomList {
 export default function Home() {
   // Estados de autenticación primero
   const [isAdmin, setIsAdmin] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
   
   // Usar el hook de datos en tiempo real después de tener isAdmin
-  const { data: realtimeData, connectedUsers, updateData } = useRealtimeData(isAdmin ? 'admin' : 'client')
+  const { data: realtimeData, connectedUsers, updateData, socket } = useRealtimeData(isAdmin ? 'admin' : 'client')
   
   // Estados locales
   const [products, setProducts] = useState<Product[]>([])
@@ -130,9 +135,7 @@ export default function Home() {
     }
   }, [updateData])
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  // Check for saved auth on mount is handled in the useEffect below
 
   const loadSettingsFromData = (settingsData: Setting[]) => {
     // Load tax rate
@@ -183,26 +186,50 @@ export default function Home() {
     }
   }
 
-  const checkAuth = () => {
-    const savedAuth = localStorage.getItem('tire_admin_auth')
-    if (savedAuth === 'true') {
+  // Funciones de autenticación
+  const handleLogin = (userType: 'admin' | 'client' | 'worker', userInfo?: any) => {
+    if (userType === 'admin') {
       setIsAdmin(true)
+      setCurrentUser(userInfo)
+      localStorage.setItem('user_type', 'admin')
+      if (userInfo) {
+        localStorage.setItem('user_info', JSON.stringify(userInfo))
+      }
+    } else {
+      setIsAdmin(false)
+      setCurrentUser(userInfo)
+      localStorage.setItem('user_type', userType)
+      if (userInfo) {
+        localStorage.setItem('user_info', JSON.stringify(userInfo))
+      }
     }
   }
 
-  const login = (password: string) => {
-    if (password === ADMIN_PASSWORD) {
-      setIsAdmin(true)
-      localStorage.setItem('tire_admin_auth', 'true')
-      return true
-    }
-    return false
-  }
-
-  const logout = () => {
+  const handleLogout = () => {
     setIsAdmin(false)
-    localStorage.removeItem('tire_admin_auth')
+    setCurrentUser(null)
+    setShowAdminPanel(false)
+    localStorage.removeItem('user_type')
+    localStorage.removeItem('user_info')
   }
+
+  // Check for saved auth on mount
+  useEffect(() => {
+    const savedUserType = localStorage.getItem('user_type')
+    const savedUserInfo = localStorage.getItem('user_info')
+    
+    if (savedUserType && savedUserInfo) {
+      try {
+        const userInfo = JSON.parse(savedUserInfo)
+        if (savedUserType === 'admin') {
+          setIsAdmin(true)
+          setCurrentUser(userInfo)
+        }
+      } catch (error) {
+        console.error('Error parsing saved user info:', error)
+      }
+    }
+  }, [])
 
   const saveTaxRate = async () => {
     try {
