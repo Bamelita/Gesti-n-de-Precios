@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { useModal } from '@/context/ModalContext'
+
 
 interface PdfImportExportProps {
   products: any[]
@@ -88,7 +88,7 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
     }
   }
 
-  // Importar desde PDF (simulado - en realidad sería OCR)
+  // Importar desde PDF con OCR fallback
   const importFromPdf = () => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -99,18 +99,112 @@ export default function PdfImportExport({ products, activeTab, onImport }: PdfIm
       
       setIsImporting(true)
       try {
-        // Nota: Importar desde PDF requiere OCR que es complejo
-        // Por ahora, mostramos un mensaje explicativo
-        showAlert('Para importar desde PDF, se requiere un servicio de OCR.\nPor ahora, puedes usar la importación desde Excel que es más precisa.', 'Información')
+        // Dinamically import libraries to avoid SSR issues
+        const [pdfjsLib, { createWorker }] = await Promise.all([
+          import('pdfjs-dist'),
+          import('tesseract.js')
+        ])
         
-        // Si quisieras implementar OCR, podrías usar servicios como:
-        // - Google Cloud Vision API
-        // - AWS Textract
-        // - Tesseract.js (cliente)
+        // Configure worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        let fullText = ''
+        let isScanned = false
+
+        // 1. Intentar extracción de texto digital
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items.map((item: any) => item.str).join(' ')
+          fullText += pageText + '\n'
+        }
+
+        // 2. Si hay muy poco texto, es probable que sea escaneado -> OCR
+        if (fullText.trim().length < 100) {
+          isScanned = true
+          showAlert('El PDF parece ser un escaneo. Iniciando OCR (Reconocimiento de caracteres)...', 'Información')
+          
+          fullText = ''
+          const worker = await createWorker('spa')
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const viewport = page.getViewport({ scale: 2.0 })
+            const canvas = document.createElement('canvas')
+            const context = canvas.getContext('2d')
+            canvas.height = viewport.height
+            canvas.width = viewport.width
+            
+            if (context) {
+              await page.render({ canvasContext: context, viewport } as any).promise
+              const { data: { text } } = await worker.recognize(canvas)
+              fullText += text + '\n'
+            }
+          }
+          await worker.terminate()
+        }
+
+        // 3. Procesar el texto extraído (Lógica similar a ExcelImport)
+        const lines = fullText.split('\n')
+        const extractedProducts: any[] = []
+        const foundMatches = new Set()
+
+        lines.forEach(line => {
+          if (line.trim().length < 5) return
+
+          // Heurística de detección: Marca/Tipo + Medida + Precio
+          
+          // 1. Buscar medida: 000/00R00
+          const sizeMatch = line.match(/(\d{2,3})[\s\.\/-]*(\d{2})[\s\.\/-]*[RrDd]?[\s\.\/-]*(\d{2})/)
+          if (!sizeMatch) return
+
+          const medida = `${sizeMatch[1]}/${sizeMatch[2]}R${sizeMatch[3]}`.toUpperCase()
+          
+          // 2. Buscar precio después de la medida
+          const afterSize = line.split(sizeMatch[0])[1] || ''
+          // Regex más flexible: busca número con decimales opcionales, puede tener $ o Bs cerca
+          const priceMatch = afterSize.match(/(?:Bs|USD|\$)?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:Bs|USD|\$)?/i)
+          
+          if (priceMatch) {
+            const precio = parseFloat(priceMatch[1].replace(',', '.'))
+            if (precio <= 0) return
+
+            // 3. Obtener la marca (texto antes de la medida)
+            let type = line.split(sizeMatch[0])[0].trim()
+            if (!type) {
+              const words = line.match(/[A-ZÁÉÍÓÚÑ]{2,}/g)
+              type = words ? words[0] : 'Sin marca'
+            }
+
+            // Limpieza básica
+            type = type.replace(/^(Cauchos?|Llanta|Neumático|Batería|Battery)\s*[-:]?\s*/gi, '')
+            type = type.replace(/\s+/g, ' ').trim()
+
+            const key = `${medida}-${type}-${precio}`
+            if (!foundMatches.has(key)) {
+              foundMatches.add(key)
+              extractedProducts.push({
+                type: type || 'Sin marca',
+                medida: medida,
+                precio: precio,
+                selected: true
+              })
+            }
+          }
+        })
+
+        if (extractedProducts.length > 0) {
+          if (onImport) onImport(extractedProducts)
+          showAlert(`${extractedProducts.length} productos detectados ${isScanned ? '(vía OCR)' : '(vía Texto Digital)'}`, 'Éxito')
+        } else {
+          showAlert('No se pudieron detectar productos con formato válido en el PDF.', 'Advertencia')
+        }
         
       } catch (error) {
         console.error('Error importing PDF:', error)
-        showAlert('Error al importar PDF', 'Error')
+        showAlert('Error al procesar el archivo PDF. Asegúrate de que no esté protegido por contraseña.', 'Error')
       } finally {
         setIsImporting(false)
       }

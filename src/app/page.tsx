@@ -248,7 +248,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error saving tax rate:', error)
-      alert('Error al guardar el impuesto')
+      showAlert('Error al guardar el impuesto', 'Error')
     }
   }
 
@@ -261,7 +261,7 @@ export default function Home() {
       })
       
       if (response.ok) {
-        alert(`Ajuste global ${type} actualizado`)
+        showAlert(`Ajuste global ${type} actualizado`, 'Éxito')
       }
     } catch (error) {
       console.error('Error saving adjustment:', error)
@@ -271,7 +271,7 @@ export default function Home() {
 
   const addProduct = async () => {
     if (!addForm.type || !addForm.medida || addForm.precioListaBs <= 0 || addForm.precioListaUsd <= 0) {
-      alert('Por favor completa todos los campos')
+      showAlert('Por favor completa todos los campos', 'Información')
       return
     }
 
@@ -288,11 +288,11 @@ export default function Home() {
       if (response.ok) {
         setAddForm({ type: '', medida: '', precioListaBs: 0, precioListaUsd: 0 })
         refreshData()
-        alert('Producto agregado correctamente')
+        showAlert('Producto agregado correctamente', 'Éxito')
       }
     } catch (error) {
       console.error('Error adding product:', error)
-      alert('Error al agregar el producto')
+      showAlert('Error al agregar el producto', 'Error')
     }
   }
 
@@ -315,11 +315,11 @@ export default function Home() {
       if (response.ok) {
         setShowEditModal(false)
         refreshData()
-        alert('Producto actualizado correctamente')
+        showAlert('Producto actualizado correctamente', 'Éxito')
       }
     } catch (error) {
       console.error('Error updating product:', error)
-      alert('Error al actualizar el producto')
+      showAlert('Error al actualizar el producto', 'Error')
     }
   }
 
@@ -334,11 +334,11 @@ export default function Home() {
       if (response.ok) {
         setShowDeleteModal(false)
         refreshData()
-        alert('Producto eliminado correctamente')
+        showAlert('Producto eliminado correctamente', 'Éxito')
       }
     } catch (error) {
       console.error('Error deleting product:', error)
-      alert('Error al eliminar el producto')
+      showAlert('Error al eliminar el producto', 'Error')
     }
   }
 
@@ -360,11 +360,11 @@ export default function Home() {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
-        alert('Exportación completada')
+        showAlert('Exportación completada', 'Éxito')
       }
     } catch (error) {
       console.error('Error exporting:', error)
-      alert('Error al exportar a Excel')
+      showAlert('Error al exportar a Excel', 'Error')
     }
   }
 
@@ -392,13 +392,13 @@ export default function Home() {
       }
       
       setShowPreviewModal(false)
-      setProducts([]) // Optimistic update
+      await refreshData()
       await showAlert(`✅ ${extractedProducts.filter(p => p.selected).length} productos importados con éxito`, 'Importación Exitosa')
       setShowPreviewModal(false)
       setExtractedProducts([])
     } catch (error) {
       console.error('Error importing products:', error)
-      alert('Error al importar productos')
+      showAlert('Error al importar productos', 'Error')
     }
   }
 
@@ -524,7 +524,7 @@ export default function Home() {
     const adjustmentPercent = currency === 'bs' ? basePriceBs : basePriceUsd
     
     if (adjustmentPercent === 0) {
-      alert('El ajuste es 0%, no hay cambios que aplicar')
+      showAlert('El ajuste es 0%, no hay cambios que aplicar', 'Información')
       return
     }
     
@@ -607,11 +607,11 @@ export default function Home() {
         // Guardar precios base en la base de datos
         saveBasePricesToDB()
         refreshData()
-        alert(`✅ ${updated} precio${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (${sign}${adjustmentPercent}% en ${currencyName})`)
+        showAlert(`✅ ${updated} precio${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (${sign}${adjustmentPercent}% en ${currencyName})`, 'Éxito')
       }
       
       if (errors > 0) {
-        alert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`)
+        showAlert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`, 'Error')
       }
     })
   }
@@ -621,7 +621,7 @@ export default function Home() {
     const adjustmentUsd = basePriceUsd
     
     if (adjustmentBs === 0 && adjustmentUsd === 0) {
-      alert('Ambos ajustes son 0%, no hay cambios que aplicar')
+      showAlert('Ambos ajustes son 0%, no hay cambios que aplicar', 'Información')
       return
     }
     
@@ -699,11 +699,11 @@ export default function Home() {
         // Guardar precios base en la base de datos
         saveBasePricesToDB()
         refreshData()
-        alert(`✅ ${updated} producto${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (Bs: ${signBs}${adjustmentBs}%, $: ${signUsd}${adjustmentUsd}%)`)
+        showAlert(`✅ ${updated} producto${updated !== 1 ? 's' : ''} actualizado${updated !== 1 ? 's' : ''} (Bs: ${signBs}${adjustmentBs}%, $: ${signUsd}${adjustmentUsd}%)`, 'Éxito')
       }
       
       if (errors > 0) {
-        alert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`)
+        showAlert(`❌ ${errors} producto${errors !== 1 ? 's' : ''} no se pudieron actualizar`, 'Error')
       }
     })
   }
