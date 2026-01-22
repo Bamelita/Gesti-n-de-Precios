@@ -109,9 +109,9 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
 
 
       {/* Password Management - Super Admin Only */}
-      <div>
-        <h3 className="text-lg font-semibold text-amber-400 mb-3">Gestión de Contraseña</h3>
-        {isSuperAdmin ? (
+      {isSuperAdmin && (
+        <div>
+          <h3 className="text-lg font-semibold text-amber-400 mb-3">Gestión de Contraseña</h3>
           <div className="space-y-3">
             <button
               onClick={() => setShowPasswordModal(true)}
@@ -123,13 +123,8 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
               Eres Super Administrador y puedes cambiar la contraseña general.
             </p>
           </div>
-        ) : (
-          <div className="text-center text-gray-500 py-4 bg-white/5 rounded-xl border border-white/5">
-            <p className="text-sm">No tienes permisos de Super Administrador</p>
-            <p className="text-xs mt-1">Solo los super administradores pueden realizar esta acción</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* All Users */}
       <div>
