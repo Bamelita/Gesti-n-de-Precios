@@ -53,14 +53,56 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    // Initialize socket connection
+    let connectionTimeout: NodeJS.Timeout
+    let fallbackInterval: NodeJS.Timeout
+    let activityInterval: NodeJS.Timeout
+
+    // Function to load data from API (fallback mode)
+    const loadDataFromAPI = async () => {
+      try {
+        console.log('Loading data from API (fallback mode)...')
+        const [productsRes, settingsRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/settings')
+        ])
+        
+        if (productsRes.ok && settingsRes.ok) {
+          const [products, settings] = await Promise.all([
+            productsRes.json(),
+            settingsRes.json()
+          ])
+          
+          setData({ products, settings })
+          console.log('Data loaded from API successfully')
+        }
+      } catch (error) {
+        console.error('Error loading data from API:', error)
+      }
+    }
+
+    // Try to connect to WebSocket service
     const newSocket = io('/?XTransformPort=3001', {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      timeout: 5000,
+      reconnectionAttempts: 3
     })
+
+    // Set a timeout to detect if WebSocket connection fails
+    connectionTimeout = setTimeout(() => {
+      if (!newSocket.connected) {
+        console.warn('WebSocket connection failed, switching to fallback mode')
+        loadDataFromAPI()
+        
+        // Poll for updates every 10 seconds in fallback mode
+        fallbackInterval = setInterval(loadDataFromAPI, 10000)
+      }
+    }, 5000)
 
     newSocket.on('connect', () => {
       console.log('Connected to realtime service')
       setIsConnected(true)
+      clearTimeout(connectionTimeout)
+      clearInterval(fallbackInterval)
       
       // Identify user
       newSocket.emit('identify-user', { userType })
@@ -77,6 +119,15 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
     newSocket.on('disconnect', () => {
       console.log('Disconnected from realtime service')
       setIsConnected(false)
+      
+      // Switch to fallback mode on disconnect
+      loadDataFromAPI()
+      fallbackInterval = setInterval(loadDataFromAPI, 10000)
+    })
+
+    newSocket.on('connect_error', (error) => {
+      console.warn('WebSocket connection error:', error.message)
+      // Fallback will be triggered by connectionTimeout
     })
 
     newSocket.on('data-update', (newData: RealtimeData) => {
@@ -96,7 +147,7 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
     }
 
     // Send activity updates
-    const activityInterval = setInterval(() => {
+    activityInterval = setInterval(() => {
       if (newSocket.connected) {
         newSocket.emit('activity')
       }
@@ -109,7 +160,12 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
 
     setSocket(newSocket)
 
+    // Load initial data from API immediately (don't wait for WebSocket)
+    loadDataFromAPI()
+
     return () => {
+      clearTimeout(connectionTimeout)
+      clearInterval(fallbackInterval)
       clearInterval(activityInterval)
       newSocket.close()
     }
