@@ -68,8 +68,8 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
       // Request current data when connected
       newSocket.emit('request-current-data')
       
-      // Request user list if admin
-      if (userType === 'admin') {
+      // Request user list if admin or worker
+      if (userType === 'admin' || userType === 'worker') {
         newSocket.emit('request-user-list')
       }
     })
@@ -87,8 +87,8 @@ export function useRealtimeData(userType: 'admin' | 'client' | 'worker' = 'clien
       }))
     })
 
-    // Listen for user list updates (admin only)
-    if (userType === 'admin') {
+    // Listen for user list updates (admin and workers)
+    if (userType === 'admin' || userType === 'worker') {
       newSocket.on('user-list', (users: ConnectedUser[]) => {
         console.log('Received user list:', users)
         setConnectedUsers(users)

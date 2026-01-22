@@ -104,7 +104,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
         {authMode === 'login' ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Nombre</label>
+              <label className="block text-sm text-gray-400 mb-1">Nombre <span className="text-red-400">*</span></label>
               <input
                 type="text"
                 value={formData.name}
@@ -115,7 +115,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Apellido</label>
+              <label className="block text-sm text-gray-400 mb-1">Apellido <span className="text-red-400">*</span></label>
               <input
                 type="text"
                 value={formData.lastName}
@@ -126,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, currentSocket }: A
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Contraseña de Admin</label>
+              <label className="block text-sm text-gray-400 mb-1">Contraseña de Admin <span className="text-red-400">*</span></label>
               <input
                 type="password"
                 value={formData.password}

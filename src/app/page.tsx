@@ -52,6 +52,7 @@ interface CustomList {
 export default function Home() {
   // Estados de autenticación primero
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isWorker, setIsWorker] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
@@ -59,8 +60,8 @@ export default function Home() {
   // Modal system
   const { showAlert, showConfirm, showPrompt } = useModal()
   
-  // Usar el hook de datos en tiempo real después de tener isAdmin
-  const { data: realtimeData, connectedUsers, updateData, socket } = useRealtimeData(isAdmin ? 'admin' : 'client')
+  // Usar el hook de datos en tiempo real después de tener isAdmin o isWorker
+  const { data: realtimeData, connectedUsers, updateData, socket } = useRealtimeData((isAdmin || isWorker) ? (isAdmin ? 'admin' : 'worker') : 'client')
   
   // Estados locales
   const [products, setProducts] = useState<Product[]>([])
@@ -194,25 +195,18 @@ export default function Home() {
 
   // Funciones de autenticación
   const handleLogin = (userType: 'admin' | 'client' | 'worker', userInfo?: any) => {
-    if (userType === 'admin') {
-      setIsAdmin(true)
-      setCurrentUser(userInfo)
-      localStorage.setItem('user_type', 'admin')
-      if (userInfo) {
-        localStorage.setItem('user_info', JSON.stringify(userInfo))
-      }
-    } else {
-      setIsAdmin(false)
-      setCurrentUser(userInfo)
-      localStorage.setItem('user_type', userType)
-      if (userInfo) {
-        localStorage.setItem('user_info', JSON.stringify(userInfo))
-      }
+    setIsAdmin(userType === 'admin')
+    setIsWorker(userType === 'worker')
+    setCurrentUser(userInfo)
+    localStorage.setItem('user_type', userType)
+    if (userInfo) {
+      localStorage.setItem('user_info', JSON.stringify(userInfo))
     }
   }
 
   const handleLogout = () => {
     setIsAdmin(false)
+    setIsWorker(false)
     setCurrentUser(null)
     setShowAdminPanel(false)
     localStorage.removeItem('user_type')
@@ -229,8 +223,10 @@ export default function Home() {
         const userInfo = JSON.parse(savedUserInfo)
         if (savedUserType === 'admin') {
           setIsAdmin(true)
-          setCurrentUser(userInfo)
+        } else if (savedUserType === 'worker') {
+          setIsWorker(true)
         }
+        setCurrentUser(userInfo)
       } catch (error) {
         console.error('Error parsing saved user info:', error)
       }
@@ -817,18 +813,20 @@ export default function Home() {
       </button>
 
       {/* Config Panel */}
-      {isAdmin && (
+      {(isAdmin || isWorker) && (
         <div className="mb-4">
           <button
             onClick={() => setShowConfigPanel(!showConfigPanel)}
-            className="w-full card-glass rounded-xl p-4 flex items-center justify-between hover:bg-white/10 transition-all"
+            className="w-full card-glass rounded-xl p-4 flex items-center justify-between hover:bg-white/10 transition-all font-semibold"
           >
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span className="text-lg font-semibold text-amber-400">Configuración Global</span>
+              <span className="text-amber-400">
+                {isAdmin ? 'Panel de Administración' : 'Panel de Usuarios Conectados'}
+              </span>
             </div>
             <svg className={`w-6 h-6 text-gray-400 transform transition-transform ${showConfigPanel ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -837,34 +835,11 @@ export default function Home() {
 
           {showConfigPanel && (
             <div className="card-glass rounded-2xl p-4 md:p-6 mt-4">
-              <h2 className="text-lg font-semibold text-amber-400 mb-4">Configuración Global</h2>
+              <AdminPanel socket={socket} currentUser={{ ...currentUser, userType: isAdmin ? 'admin' : 'worker' }} />
               
-              {/* Connected Users - Admin Only */}
-              {isAdmin && connectedUsers.length > 0 && (
-                <div className="mb-6 border-t border-white/10 pt-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Usuarios Conectados ({connectedUsers.length})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {connectedUsers.map((user, index) => (
-                      <div key={user.id} className="flex items-center gap-2 p-2 rounded bg-white/5">
-                        <div className={`w-2 h-2 rounded-full ${
-                          user.userType === 'admin' ? 'bg-red-400' :
-                          user.userType === 'worker' ? 'bg-blue-400' : 'bg-green-400'
-                        }`}></div>
-                        <span className="text-xs">
-                          {user.userType === 'admin' ? '👑 Admin' :
-                           user.userType === 'worker' ? '👷 Trabajador' : '👤 Cliente'}
-                        </span>
-                        <span className="text-xs text-gray-400">
-                          {new Date(user.connectedAt).toLocaleTimeString('es-VE', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {isAdmin && (
+                <>
+                  <h2 className="text-lg font-semibold text-amber-400 mb-4 mt-8 border-t border-white/10 pt-6">Configuración Global</h2>
               
               {/* Tax Config */}
               <div className="mb-6">
@@ -1095,8 +1070,10 @@ export default function Home() {
                   <p className="text-xs text-gray-400 mt-2">Los nuevos cauchos heredan automáticamente estos ajustes globales</p>
                 </div>
               </div>
-            </div>
+            </>
           )}
+          </div>
+        )}
         </div>
       )}
 

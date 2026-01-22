@@ -20,6 +20,14 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
   const [message, setMessage] = useState('')
   const { showAlert, showConfirm } = useModal()
 
+  const isAdmin = currentUser?.userType === 'admin'
+
+  const formatName = (name?: string, lastName?: string) => {
+    if (!name) return 'Anónimo'
+    const initial = lastName ? ` ${lastName.charAt(0)}.` : ''
+    return `${name}${initial}`
+  }
+
   const handleChangePassword = () => {
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
       setMessage('Por favor completa todos los campos')
@@ -71,48 +79,33 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
     })
   }
 
+  const handleKickWorker = async (targetSocketId: string, targetName: string) => {
+    if (!isAdmin) {
+      showAlert('No tienes permiso para hacer esto.', 'Error')
+      return
+    }
+
+    if (!await showConfirm(`¿Estás seguro de que quieres sacar a ${targetName} de la sesión?`, 'Confirmar')) {
+      return
+    }
+
+    socket.emit('kick-worker', targetSocketId)
+
+    socket.on('kick-worker-success', (msg) => {
+      showAlert(msg, 'Éxito')
+    })
+
+    socket.on('kick-worker-error', (errorMsg) => {
+      showAlert(errorMsg, 'Error')
+    })
+  }
+
   const admins = connectedUsers.filter(user => user.userType === 'admin')
   const canChangePassword = currentUser?.canChangePassword
 
   return (
     <div className="space-y-6">
-      {/* Admin List */}
-      <div>
-        <h3 className="text-lg font-semibold text-amber-400 mb-3">Administradores Conectados</h3>
-        <div className="space-y-2">
-          {admins.map((admin) => (
-            <div key={admin.id} className="flex items-center justify-between p-3 rounded bg-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                <div>
-                  <div className="font-medium">
-                    👑 {admin.name} {admin.lastName}
-                    {admin.id === currentUser?.socketId && <span className="text-xs text-amber-400 ml-2">(Tú)</span>}
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    Conectado: {new Date(admin.connectedAt).toLocaleTimeString('es-VE')}
-                  </div>
-                </div>
-              </div>
-              
-              {admin.id !== currentUser?.socketId && (
-                <button
-                  onClick={() => handleRemoveAdmin(admin.id, `${admin.name} ${admin.lastName}`)}
-                  className="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 text-sm transition-all"
-                >
-                  Remover
-                </button>
-              )}
-            </div>
-          ))}
-          
-          {admins.length === 0 && (
-            <div className="text-center text-gray-500 py-4">
-              No hay administradores conectados
-            </div>
-          )}
-        </div>
-      </div>
+
 
       {/* Password Management */}
       <div>
@@ -139,27 +132,66 @@ export default function AdminPanel({ socket, currentUser }: AdminPanelProps) {
 
       {/* All Users */}
       <div>
-        <h3 className="text-lg font-semibold text-amber-400 mb-3">Todos los Usuarios Conectados</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-amber-400">Usuarios Conectados</h3>
+          <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 text-xs font-medium text-gray-300">
+            Total: {connectedUsers.length}
+          </span>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {connectedUsers.map((user) => (
-            <div key={user.id} className="flex items-center gap-2 p-2 rounded bg-white/5">
-              <div className={`w-2 h-2 rounded-full ${
-                user.userType === 'admin' ? 'bg-red-400' :
-                user.userType === 'worker' ? 'bg-blue-400' : 'bg-green-400'
-              }`}></div>
-              <div className="flex-1">
-                <div className="text-xs font-medium">
-                  {user.userType === 'admin' ? '👑 Admin' :
-                   user.userType === 'worker' ? '👷 Trabajador' : '👤 Cliente'}
-                  {user.name && `: ${user.name} ${user.lastName || ''}`}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {new Date(user.connectedAt).toLocaleTimeString('es-VE', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
+            <div key={user.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full shadow-sm ${
+                  user.userType === 'admin' ? 'bg-red-500 shadow-red-500/50' :
+                  user.userType === 'worker' ? 'bg-blue-500 shadow-blue-500/50' : 'bg-green-500 shadow-green-500/50'
+                }`}></div>
+                <div>
+                  <div className="text-sm font-semibold flex items-center gap-2">
+                    {user.userType === 'admin' ? '👑' :
+                     user.userType === 'worker' ? '👷' : '👤'}
+                    {formatName(user.name, user.lastName)}
+                    {user.socketId === currentUser?.socketId && (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Tú</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-medium">
+                    {user.userType === 'admin' ? 'Administrador' :
+                     user.userType === 'worker' ? 'Trabajador' : 'Cliente'} 
+                    <span className="mx-1.5">•</span>
+                    {new Date(user.connectedAt).toLocaleTimeString('es-VE', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </div>
                 </div>
               </div>
+
+              {isAdmin && user.socketId !== currentUser?.socketId && (
+                <div className="flex gap-2">
+                  {user.userType === 'worker' && (
+                    <button
+                      onClick={() => handleKickWorker(user.id, formatName(user.name, user.lastName))}
+                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all border border-red-500/20"
+                      title="Sacar trabajador"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                    </button>
+                  )}
+                  {user.userType === 'admin' && canChangePassword && (
+                    <button
+                      onClick={() => handleRemoveAdmin(user.id, formatName(user.name, user.lastName))}
+                      className="p-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs transition-all border border-orange-500/20"
+                      title="Degradar admin"
+                    >
+                      👑 ↓
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

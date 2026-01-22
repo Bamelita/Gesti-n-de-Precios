@@ -165,7 +165,31 @@ io.on('connection', (socket) => {
     console.log(`Admin ${currentUser.name} ${currentUser.lastName} removed admin privileges from ${targetUser.name} ${targetUser.lastName}`)
   })
 
-  // Send current data when client connects
+  // Remove worker (Any admin can do this)
+  socket.on('kick-worker', (targetSocketId: string) => {
+    const currentUser = connectedUsers.get(socket.id)
+    if (!currentUser || currentUser.userType !== 'admin') {
+      socket.emit('kick-worker-error', 'No autorizado')
+      return
+    }
+
+    const targetUser = connectedUsers.get(targetSocketId)
+    if (!targetUser || targetUser.userType !== 'worker') {
+      socket.emit('kick-worker-error', 'Usuario no encontrado o no es trabajador')
+      return
+    }
+
+    // Disconnect the worker
+    const targetSocket = io.sockets.sockets.get(targetSocketId)
+    if (targetSocket) {
+      targetSocket.disconnect()
+    }
+    
+    connectedUsers.delete(targetSocketId)
+    socket.emit('kick-worker-success', 'Trabajador desconectado')
+    broadcastUserList()
+    console.log(`Admin ${currentUser.name} kicked worker ${targetUser.name}`)
+  })
   socket.on('request-current-data', async () => {
     try {
       const [productsRes, settingsRes] = await Promise.all([
@@ -182,10 +206,10 @@ io.on('connection', (socket) => {
     }
   })
 
-  // Request user list (admin only)
+  // Request user list (admin and workers only)
   socket.on('request-user-list', () => {
     const user = connectedUsers.get(socket.id)
-    if (user && user.userType === 'admin') {
+    if (user && (user.userType === 'admin' || user.userType === 'worker')) {
       socket.emit('user-list', Array.from(connectedUsers.values()))
     }
   })
@@ -205,13 +229,15 @@ io.on('connection', (socket) => {
   })
 })
 
-// Function to broadcast user list to admins
+// Function to broadcast user list to admins and workers
 function broadcastUserList() {
-  const admins = Array.from(connectedUsers.values()).filter(user => user.userType === 'admin')
+  const recipients = Array.from(connectedUsers.values())
+    .filter(user => user.userType === 'admin' || user.userType === 'worker')
+  
   const userList = Array.from(connectedUsers.values())
   
-  admins.forEach(admin => {
-    const socket = io.sockets.sockets.get(admin.socketId)
+  recipients.forEach(recipient => {
+    const socket = io.sockets.sockets.get(recipient.socketId)
     if (socket) {
       socket.emit('user-list', userList)
     }
