@@ -774,7 +774,7 @@ export default function Home() {
           >
             🔋 Baterías
           </button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <button
               onClick={() => showAlert('Función de agregar lista en desarrollo', 'Próximamente')}
               className="px-6 py-2 rounded-lg font-medium transition-all bg-green-600/20 text-green-400 hover:bg-green-600/40 border-2 border-green-600/50 border-dashed"
@@ -843,7 +843,7 @@ export default function Home() {
             <div className="card-glass rounded-2xl p-4 md:p-6 mt-4">
               <AdminPanel socket={socket} currentUser={{ ...currentUser, userType: isAdmin ? 'admin' : 'worker' }} />
               
-              {isSuperAdmin && (
+              {isAdmin && (
                 <>
                   <h2 className="text-lg font-semibold text-amber-400 mb-4 mt-8 border-t border-white/10 pt-6">Configuración Global</h2>
               
