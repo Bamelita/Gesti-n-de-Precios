@@ -86,16 +86,16 @@ export default function Home() {
     cauchos: { cashea: '', transferencia: '', divisas: '', custom: '', pagoMovil: '' },
     baterias: { cashea: '', transferencia: '', divisas: '', custom: '', pagoMovil: '' }
   })
-  const [priceColumns, setPriceColumns] = useState<{ key: string, label: string, base: 'bs' | 'usd' }[]>([
-    { key: 'cashea', label: 'Cashea (Bs)', base: 'bs' },
-    { key: 'transferencia', label: 'Transferencia (Bs)', base: 'bs' },
-    { key: 'divisas', label: 'Divisas ($)', base: 'usd' },
-    { key: 'custom', label: 'Divisas en Fisico', base: 'usd' },
-    { key: 'pagoMovil', label: 'Pago Móvil (Bs)', base: 'bs' }
+  const [priceColumns, setPriceColumns] = useState<{ key: string, label: string, base: 'bs' | 'usd', applyTax: boolean }[]>([
+    { key: 'cashea', label: 'Cashea (Bs)', base: 'bs', applyTax: true },
+    { key: 'transferencia', label: 'Transferencia (Bs)', base: 'bs', applyTax: true },
+    { key: 'divisas', label: 'Divisas ($)', base: 'usd', applyTax: false },
+    { key: 'custom', label: 'Divisas en Fisico', base: 'usd', applyTax: false },
+    { key: 'pagoMovil', label: 'Pago Móvil (Bs)', base: 'bs', applyTax: true }
   ])
   const [newColumnName, setNewColumnName] = useState('')
   const [newColumnBase, setNewColumnBase] = useState<'bs' | 'usd'>('bs')
-  const [editingColumn, setEditingColumn] = useState<{ key: string, label: string, base: 'bs' | 'usd' } | null>(null)
+  const [editingColumn, setEditingColumn] = useState<{ key: string, label: string, base: 'bs' | 'usd', applyTax: boolean } | null>(null)
   const [isManagingColumns, setIsManagingColumns] = useState(false)
   const [defaultAdjustments, setDefaultAdjustments] = useState<Record<string, any>>({
     cauchos: { cashea: 0, transferencia: 0, divisas: 0, custom: 0, pagoMovil: 0 },
@@ -255,10 +255,12 @@ export default function Home() {
         let cols = JSON.parse(priceColsSetting.settingValue)
         // Auto-update legacy labels to new standard and FORCE correct base currency
         cols = cols.map((c: any) => {
-           if (c.key === 'cashea') return { ...c, label: 'Cashea (Bs)', base: 'bs' }
-           if (c.key === 'transferencia') return { ...c, label: 'Transferencia (Bs)', base: 'bs' }
-           if (c.key === 'pagoMovil') return { ...c, label: 'Pago Móvil (Bs)', base: 'bs' }
-           if (c.key === 'divisas') return { ...c, label: 'Divisas ($)', base: 'usd' }
+           if (c.key === 'cashea') return { ...c, label: 'Cashea (Bs)', base: 'bs', applyTax: c.applyTax !== undefined ? c.applyTax : true }
+           if (c.key === 'transferencia') return { ...c, label: 'Transferencia (Bs)', base: 'bs', applyTax: c.applyTax !== undefined ? c.applyTax : true }
+           if (c.key === 'pagoMovil') return { ...c, label: 'Pago Móvil (Bs)', base: 'bs', applyTax: c.applyTax !== undefined ? c.applyTax : true }
+           if (c.key === 'divisas') return { ...c, label: 'Divisas ($)', base: 'usd', applyTax: c.applyTax !== undefined ? c.applyTax : false }
+           // Default applyTax to true for bs, false for usd if not present
+           if (c.applyTax === undefined) return { ...c, applyTax: c.base === 'bs' }
            return c
         })
         setPriceColumns(cols)
@@ -761,9 +763,9 @@ export default function Home() {
     }
   }
 
-  const calculatePrice = (basePrice: number, adjustment: number, currency: 'bs' | 'usd' = 'bs') => {
-    // Aplicar impuesto solo si es Bs
-    const priceWithTax = currency === 'bs' ? basePrice * (1 + taxRate / 100) : basePrice
+  const calculatePrice = (basePrice: number, adjustment: number, currency: 'bs' | 'usd' = 'bs', applyTax: boolean = false) => {
+    // Aplicar impuesto solo si está habilitado para esta columna
+    const priceWithTax = applyTax ? basePrice * (1 + taxRate / 100) : basePrice
     // Luego aplicar ajuste (descuento o incremento)
     const finalPrice = priceWithTax * (1 + adjustment / 100)
     return finalPrice
@@ -833,7 +835,7 @@ export default function Home() {
     if (!newColumnName.trim()) return
     
     const key = newColumnName.toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString().slice(-4)
-    const newCol = { key, label: newColumnName, base: newColumnBase }
+    const newCol = { key, label: newColumnName, base: newColumnBase, applyTax: newColumnBase === 'bs' }
     const newColumns = [...priceColumns, newCol]
     
     try {
@@ -920,11 +922,11 @@ export default function Home() {
     }
   }
 
-  const editPriceColumn = async (key: string, newLabel: string, newBase: 'bs' | 'usd') => {
+  const editPriceColumn = async (key: string, newLabel: string, newBase: 'bs' | 'usd', newApplyTax: boolean) => {
     if (!newLabel.trim()) return
     
     const newColumns = priceColumns.map(col => 
-      col.key === key ? { ...col, label: newLabel, base: newBase } : col
+      col.key === key ? { ...col, label: newLabel, base: newBase, applyTax: newApplyTax } : col
     )
     
     try {
@@ -1226,9 +1228,10 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                   <div className="flex gap-2 items-center">
                     <input
                       type="number"
-                      value={taxRate}
-                      onChange={(e) => setTaxRate(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                      className="input-dark rounded-lg px-3 py-2 w-full text-white"
+                      value={taxRate === 0 ? '' : taxRate}
+                      onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                      className="input-dark rounded-lg px-3 py-2 w-full text-white placeholder-gray-500"
+                      placeholder="0"
                       min="0"
                       max="100"
                       step="0.1"
@@ -1238,12 +1241,63 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                 </div>
 
                 <div className="md:col-span-2">
-                  <button
-                    onClick={saveTaxRate}
-                    className="w-full btn-primary px-4 py-2 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-red-500/20"
-                  >
-                    Guardar Configuración
-                  </button>
+                  <h3 className="text-sm text-gray-400 mb-2">Aplicar IVA a Columnas:</h3>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {priceColumns.map(col => (
+                      <label key={col.key} className="flex items-center gap-2 cursor-pointer bg-black/20 p-2 rounded border border-white/5 hover:border-white/10">
+                        <input 
+                          type="checkbox"
+                          checked={col.applyTax}
+                          onChange={async (e) => {
+                            const updated = priceColumns.map(c => 
+                              c.key === col.key ? { ...c, applyTax: e.target.checked } : c
+                            )
+                            setPriceColumns(updated)
+                            // Auto save columns config when toggling
+                            try {
+                              await fetch('/api/settings/price_columns', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ settingValue: JSON.stringify(updated) })
+                              })
+                            } catch (err) { console.error(err) }
+                          }}
+                          className="w-4 h-4 rounded border-gray-600 text-red-600 focus:ring-red-500 bg-gray-700"
+                        />
+                        <span className="text-xs text-gray-300">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 items-center">
+                    <button
+                      onClick={saveTaxRate}
+                      className="flex-1 btn-primary px-4 py-2 rounded-lg font-medium text-white transition-all shadow-lg hover:shadow-red-500/20"
+                    >
+                      Guardar Configuración
+                    </button>
+                    <button
+                      onClick={() => {
+                          setTaxRate(0)
+                          const updated = priceColumns.map(c => ({ ...c, applyTax: false }))
+                          setPriceColumns(updated)
+                          fetch('/api/settings/price_columns', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ settingValue: JSON.stringify(updated) })
+                          }).catch(console.error)
+                          saveTaxRate()
+                      }}
+                      className="text-xs text-orange-500 hover:text-orange-400 flex items-center gap-1 font-medium transition-colors px-2"
+                      title="Restablecer Impuesto y Selección"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Restablecer
+                    </button>
+                  </div>
+
                 </div>
               </div>
 
@@ -1403,7 +1457,7 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                           
                           <div className="flex gap-2 shrink-0">
                             <button
-                              onClick={() => setEditingColumn({ key: col.key, label: col.label, base: col.base || 'bs' })}
+                              onClick={() => setEditingColumn({ key: col.key, label: col.label, base: col.base || 'bs', applyTax: col.applyTax !== undefined ? col.applyTax : (col.base === 'bs') })}
                               className="text-blue-400 hover:text-blue-300 p-1"
                               title="Editar columna"
                             >
@@ -1803,7 +1857,7 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                       ? editForm.precioListaUsd 
                       : editForm.precioListaBs
                       
-                    const finalPrice = Math.max(0, calculatePrice(basePrice, effectiveAdjustment, currency))
+                    const finalPrice = Math.max(0, calculatePrice(basePrice, effectiveAdjustment, currency, col.applyTax))
                     
                     return (
                       <div key={key} className="card-glass rounded-lg p-3">
@@ -1874,6 +1928,17 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                   <option value="usd">Base $</option>
                 </select>
               </div>
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={editingColumn.applyTax}
+                    onChange={(e) => setEditingColumn({...editingColumn, applyTax: e.target.checked})}
+                    className="w-4 h-4 rounded border-gray-600 text-red-600 focus:ring-red-500 bg-gray-700"
+                  />
+                  <span className="text-sm text-gray-400">Aplicar IVA</span>
+                </label>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -1884,7 +1949,7 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                 Cancelar
               </button>
               <button 
-                onClick={() => editPriceColumn(editingColumn.key, editingColumn.label, editingColumn.base)}
+                onClick={() => editPriceColumn(editingColumn.key, editingColumn.label, editingColumn.base, editingColumn.applyTax)}
                 className="flex-1 btn-primary px-4 py-2.5 rounded-xl font-medium text-gray-900 transition-all shadow-lg shadow-amber-500/20 active:scale-95"
               >
                 Guardar

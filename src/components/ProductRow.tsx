@@ -21,7 +21,7 @@ interface ProductRowProps {
   product: Product
   isAdmin: boolean
   getEffectiveAdjustment: (product: Product, type: string) => number
-  calculatePrice: (basePrice: number, adjustment: number, currency?: 'bs' | 'usd') => number
+  calculatePrice: (basePrice: number, adjustment: number, currency?: 'bs' | 'usd', applyTax?: boolean) => number
   openEditModal: (product: Product) => void
   openDeleteModal: (product: Product) => void
   currentDefaults: { [key: string]: number }
@@ -61,7 +61,7 @@ export default function ProductRow({
         <div className="font-mono text-red-500 font-bold">{product.medida}</div>
         <div className="text-sm text-gray-400">{product.type}</div>
       </td>
-      {(priceColumns || []).map(({ key: type, base }) => {
+      {(priceColumns || []).map(({ key: type, base, applyTax }) => {
         const adjustment = getEffectiveAdjustment(product, type)
         const nativeCurrency = base || 'usd' // The actual currency of this column
         const isNativeUsd = nativeCurrency === 'usd'
@@ -72,59 +72,73 @@ export default function ProductRow({
         // This ensures "Base: $50.00" matches the List Price column.
         const nativeBasePrice = isNativeUsd ? getDisplayedBasePrice('usd') : getDisplayedBasePrice('bs')
         
-        // 2. Calculate final price in native currency (includes tax if Bs)
-        const nativeFinalPrice = Math.max(0, calculatePrice(nativeBasePrice, adjustment, nativeCurrency))
-        const nativeTaxAmount = nativeCurrency === 'bs' ? nativeBasePrice * (taxRate / 100) : 0
+        // 2. Calculate final price in native currency (includes tax if enabled)
+        const shouldApplyTax = applyTax !== undefined ? applyTax : (nativeCurrency === 'bs')
+        
+        // CORRECCIÓN: Usar directamente la lógica de cálculo
+        // Si no hay ajuste, el precio es el base (con o sin IVA).
+        // Si la moneda es USD y no hay IVA, y no hay ajuste, debería ser igual a Base.
+        
+        const nativeFinalPrice = Math.max(0, calculatePrice(nativeBasePrice, adjustment, nativeCurrency, shouldApplyTax))
+        const nativeTaxAmount = shouldApplyTax ? nativeBasePrice * (taxRate / 100) : 0
 
-          // Conversion Logic
-          let displayBasePrice = nativeBasePrice
-          let displayFinalPrice = nativeFinalPrice
-          let displayTaxAmount = nativeTaxAmount
+        // Conversion Logic
+        // Aquí estaba el problema: al convertir para visualización, se estaban mezclando tasas de cambio.
+        // Si viewCurrency es 'bs' (defecto), pero la columna es nativa USD, convertíamos.
+        // PERO si el usuario quiere ver "Divisas ($)", esa columna es nativa USD.
+        // El componente ProductRow recibe 'viewCurrency' pero para las columnas específicas
+        // deberíamos respetar su moneda base si queremos mostrar "$".
+        
+        // En tu caso, quieres que TODO se vea con símbolo $, pero que el valor numérico sea correcto.
+        // Si la columna es "Divisas ($)", nativeBasePrice es 50. adjustment es 0.
+        // nativeFinalPrice debería ser 50.
+        // Si displayFinalPrice muestra 3000, es porque se está multiplicando por la tasa (60 * 50 = 3000).
+        
+        // SOLUCIÓN: Si la columna es nativa USD, NO convertir a Bs aunque la vista global sea Bs.
+        // O más bien, mostrar siempre el valor en la moneda de la columna.
+        
+        let displayFinalPrice = nativeFinalPrice
+        let displayTaxAmount = nativeTaxAmount
 
-          if (viewCurrency === 'bs' && isNativeUsd) {
-             displayBasePrice = nativeBasePrice * exchangeRate
-             displayFinalPrice = nativeFinalPrice * exchangeRate
-             // Tax logic: if viewing in Bs, tax should apply?
-             // Usually USD prices don't have tax added on top, but if converted to Bs they might.
-             // Keeping consistent: if source is USD, no tax added unless explicitly handled.
-          } else if (viewCurrency === 'usd' && !isNativeUsd) {
-             displayBasePrice = nativeBasePrice / exchangeRate
-             displayFinalPrice = nativeFinalPrice / exchangeRate
-             displayTaxAmount = nativeTaxAmount / exchangeRate
-          } else if (viewCurrency === 'bs' && !isNativeUsd) {
-             // Viewing Bs, Source Bs - Tax is already in nativeTaxAmount
-          }
+        // Si la vista global pide conversión, se hace, PERO
+        // tu requerimiento dice: "deberia de ser el precio de la Lista ($)".
+        // La columna "Divisas ($)" tiene base='usd'.
+        // Si viewCurrency='bs', el código anterior convertía 50 USD -> 3000 Bs.
+        // Y como forzamos el símbolo $, se veía "$3000".
+        
+        // Vamos a forzar que si la columna es base USD, se muestre en USD.
+        // Y si es base Bs, se muestre en Bs (pero con símbolo $).
+        
+        // Eliminamos la lógica de conversión basada en viewCurrency para las columnas individuales
+        // para que siempre respeten su moneda base definida.
+        
+        /* 
+           Lógica anterior eliminada para evitar conversiones no deseadas.
+           Ahora displayFinalPrice es siempre igual a nativeFinalPrice.
+           Esto hará que:
+           - Cashea (Bs): Muestre monto en Bs.
+           - Divisas ($): Muestre monto en $.
+        */
 
-          const defaultAdj = currentDefaults?.[type] || 0
-          const isIndividual = Math.abs(adjustment - defaultAdj) > 0.01
+        const defaultAdj = currentDefaults?.[type] || 0
+        const isIndividual = Math.abs(adjustment - defaultAdj) > 0.01
 
-          return (
+        return (
           <td key={type} className="py-3 px-2 text-right">
             <div className="text-xs text-gray-300 mb-0.5 font-medium">
-              Base: {nativeCurrency === 'usd' ? '$' : 'Bs'}{nativeBasePrice.toFixed(2)}
+              Base: ${nativeBasePrice.toFixed(2)}
             </div>
             <div className={`text-sm mb-0.5 font-bold ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-gray-400'}`}>
               {(adjustment >= 0 ? '+' : '')}{adjustment}%
               {isIndividual && <span className="text-red-500 ml-1" title="Ajuste individual">●</span>}
             </div>
-            {nativeCurrency === 'bs' && (
-              <div className="text-xs text-gray-400 mb-0.5 font-medium">
-                IVA: ${displayTaxAmount.toFixed(2)}
-                <span className="text-gray-500 ml-1">
-                  ({viewCurrency === 'usd' ? 'Bs' : '$'}{(viewCurrency === 'usd' ? displayTaxAmount * exchangeRate : displayTaxAmount / exchangeRate).toFixed(2)})
-                </span>
-              </div>
-            )}
             <div className="font-mono text-sm font-bold text-white">
-              {nativeCurrency === 'bs' ? 'Total + IVA:' : 'Total:'} ${displayFinalPrice.toFixed(2)}
-              <span className="text-gray-400 text-xs ml-1 font-normal">
-                 / {viewCurrency === 'usd' ? 'Bs' : '$'}{(viewCurrency === 'usd' ? displayFinalPrice * exchangeRate : displayFinalPrice / exchangeRate).toFixed(2)}
-              </span>
+              {shouldApplyTax ? 'Total + IVA:' : 'Total:'} ${displayFinalPrice.toFixed(2)}
             </div>
           </td>
         )
       })}
-      <td className="py-3 px-2 text-right font-mono text-sm">Bs{getDisplayedBasePrice('bs').toFixed(2)}</td>
+      <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('bs').toFixed(2)}</td>
       <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('usd').toFixed(2)}</td>
       <td className="py-3 pl-2 text-center">
         <div className="flex justify-center gap-1">

@@ -19,7 +19,7 @@ interface MobileProductCardProps {
   product: Product
   isAdmin: boolean
   getEffectiveAdjustment: (product: Product, type: string) => number
-  calculatePrice: (basePrice: number, adjustment: number, currency?: 'bs' | 'usd') => number
+  calculatePrice: (basePrice: number, adjustment: number, currency?: 'bs' | 'usd', applyTax?: boolean) => number
   openEditModal: (product: Product) => void
   openDeleteModal: (product: Product) => void
   currentDefaults: { [key: string]: number }
@@ -91,31 +91,27 @@ export default function MobileProductCard({
 
       {/* Prices Grid */}
       <div className="grid grid-cols-2 gap-2">
-        {(priceColumns || []).map(({ key: type, label, base }) => {
+        {(priceColumns || []).map(({ key: type, label, base, applyTax }) => {
           const adjustment = getEffectiveAdjustment(product, type)
           const nativeCurrency = base || 'usd'
           const isNativeUsd = nativeCurrency === 'usd'
           
           // FIX: Always use the price from the list (which includes global adjustments) as the base
           const nativeBasePrice = isNativeUsd ? getDisplayedBasePrice('usd') : getDisplayedBasePrice('bs')
-          const nativeFinalPrice = Math.max(0, calculatePrice(nativeBasePrice, adjustment, nativeCurrency))
-          const nativeTaxAmount = nativeCurrency === 'bs' ? nativeBasePrice * (taxRate / 100) : 0
+          const shouldApplyTax = applyTax !== undefined ? applyTax : (nativeCurrency === 'bs')
+          const nativeFinalPrice = Math.max(0, calculatePrice(nativeBasePrice, adjustment, nativeCurrency, shouldApplyTax))
+          const nativeTaxAmount = shouldApplyTax ? nativeBasePrice * (taxRate / 100) : 0
           
-          // Conversion Logic
+          // Conversion Logic REMOVED to respect native column currency
           let displayBasePrice = nativeBasePrice
           let displayFinalPrice = nativeFinalPrice
           let displayTaxAmount = nativeTaxAmount
 
-          if (viewCurrency === 'bs' && isNativeUsd) {
-             // Convert USD to Bs
-             displayBasePrice = nativeBasePrice * exchangeRate
-             displayFinalPrice = nativeFinalPrice * exchangeRate
-          } else if (viewCurrency === 'usd' && !isNativeUsd) {
-             // Convert Bs to USD
-             displayBasePrice = nativeBasePrice / exchangeRate
-             displayFinalPrice = nativeFinalPrice / exchangeRate
-             displayTaxAmount = nativeTaxAmount / exchangeRate
-          }
+          /* 
+             Eliminamos conversión para que:
+             - Columnas en Bs se muestren en Bs (con símbolo $)
+             - Columnas en USD se muestren en USD (con símbolo $)
+          */
 
           const defaultAdj = currentDefaults?.[type] || 0
           const isIndividual = Math.abs(adjustment - defaultAdj) > 0.01
@@ -140,21 +136,10 @@ export default function MobileProductCard({
               
               <div className="flex flex-col w-full">
                 <div className="text-[8px] text-gray-400 font-medium leading-none mb-0.5">
-                  Base: {nativeCurrency === 'usd' ? '$' : 'Bs'}{nativeBasePrice.toFixed(2)}
+                  Base: ${nativeBasePrice.toFixed(2)}
                 </div>
-                {nativeCurrency === 'bs' && (
-                   <div className="text-[8px] text-gray-400 font-medium leading-none mb-0.5">
-                     IVA: ${displayTaxAmount.toFixed(2)}
-                     <span className="ml-1 opacity-70">
-                       ({viewCurrency === 'usd' ? 'Bs' : '$'}{(viewCurrency === 'usd' ? displayTaxAmount * exchangeRate : displayTaxAmount / exchangeRate).toFixed(2)})
-                     </span>
-                   </div>
-                )}
                 <div className="text-sm font-bold font-mono text-white leading-none text-right">
                   <div>{nativeCurrency === 'bs' ? 'Total + IVA:' : 'Total:'} ${displayFinalPrice.toFixed(2)}</div>
-                  <div className="text-[10px] text-gray-400 font-normal mt-0.5">
-                     {viewCurrency === 'usd' ? 'Bs' : '$'}{(viewCurrency === 'usd' ? displayFinalPrice * exchangeRate : displayFinalPrice / exchangeRate).toFixed(2)}
-                  </div>
                 </div>
               </div>
             </div>
