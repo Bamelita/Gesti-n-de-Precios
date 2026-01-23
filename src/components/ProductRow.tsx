@@ -80,58 +80,13 @@ const ProductRow = memo(function ProductRow({
         const isNativeUsd = nativeCurrency === 'usd'
         
         // 1. Get base price in native currency
-        // FIX: Always use the price from the list (which includes global adjustments) as the base
-        // If native column is USD, use USD list price. If Bs, use Bs list price.
-        // This ensures "Base: $50.00" matches the List Price column.
         const nativeBasePrice = isNativeUsd ? getDisplayedBasePrice('usd') : getDisplayedBasePrice('bs')
         
         // 2. Calculate final price in native currency (includes tax if enabled)
         const shouldApplyTax = applyTax !== undefined ? applyTax : (nativeCurrency === 'bs')
         
-        // CORRECCIÓN: Usar directamente la lógica de cálculo
-        // Si no hay ajuste, el precio es el base (con o sin IVA).
-        // Si la moneda es USD y no hay IVA, y no hay ajuste, debería ser igual a Base.
-        
         const nativeFinalPrice = Math.max(0, calculatePrice(nativeBasePrice, adjustment, nativeCurrency, shouldApplyTax))
         const nativeTaxAmount = shouldApplyTax ? nativeBasePrice * (taxRate / 100) : 0
-
-        // Conversion Logic
-        // Aquí estaba el problema: al convertir para visualización, se estaban mezclando tasas de cambio.
-        // Si viewCurrency es 'bs' (defecto), pero la columna es nativa USD, convertíamos.
-        // PERO si el usuario quiere ver "Divisas ($)", esa columna es nativa USD.
-        // El componente ProductRow recibe 'viewCurrency' pero para las columnas específicas
-        // deberíamos respetar su moneda base si queremos mostrar "$".
-        
-        // En tu caso, quieres que TODO se vea con símbolo $, pero que el valor numérico sea correcto.
-        // Si la columna es "Divisas ($)", nativeBasePrice es 50. adjustment es 0.
-        // nativeFinalPrice debería ser 50.
-        // Si displayFinalPrice muestra 3000, es porque se está multiplicando por la tasa (60 * 50 = 3000).
-        
-        // SOLUCIÓN: Si la columna es nativa USD, NO convertir a Bs aunque la vista global sea Bs.
-        // O más bien, mostrar siempre el valor en la moneda de la columna.
-        
-        let displayFinalPrice = nativeFinalPrice
-        let displayTaxAmount = nativeTaxAmount
-
-        // Si la vista global pide conversión, se hace, PERO
-        // tu requerimiento dice: "deberia de ser el precio de la Lista ($)".
-        // La columna "Divisas ($)" tiene base='usd'.
-        // Si viewCurrency='bs', el código anterior convertía 50 USD -> 3000 Bs.
-        // Y como forzamos el símbolo $, se veía "$3000".
-        
-        // Vamos a forzar que si la columna es base USD, se muestre en USD.
-        // Y si es base Bs, se muestre en Bs (pero con símbolo $).
-        
-        // Eliminamos la lógica de conversión basada en viewCurrency para las columnas individuales
-        // para que siempre respeten su moneda base definida.
-        
-        /* 
-           Lógica anterior eliminada para evitar conversiones no deseadas.
-           Ahora displayFinalPrice es siempre igual a nativeFinalPrice.
-           Esto hará que:
-           - Cashea (Bs): Muestre monto en Bs.
-           - Divisas ($): Muestre monto en $.
-        */
 
         const defaultAdj = currentDefaults?.[type] || 0
         const isIndividual = Math.abs(adjustment - defaultAdj) > 0.01
@@ -139,19 +94,19 @@ const ProductRow = memo(function ProductRow({
         return (
           <td key={type} className="py-3 px-2 text-right">
             <div className="text-xs text-gray-300 mb-0.5 font-medium">
-              Base: ${nativeBasePrice.toFixed(2)}
+              Base: {isNativeUsd ? '$' : 'Bs'}{nativeBasePrice.toFixed(2)}
             </div>
             <div className={`text-sm mb-0.5 font-bold ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-gray-400'}`}>
               {(adjustment >= 0 ? '+' : '')}{adjustment}%
               {isIndividual && <span className="text-red-500 ml-1" title="Ajuste individual">●</span>}
             </div>
             <div className="font-mono text-sm font-bold text-white">
-              {shouldApplyTax ? 'Total + IVA:' : 'Total:'} ${displayFinalPrice.toFixed(2)}
+              {shouldApplyTax ? 'Total + IVA:' : 'Total:'} {isNativeUsd ? '$' : 'Bs'}{nativeFinalPrice.toFixed(2)}
             </div>
           </td>
         )
       })}
-      <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('bs').toFixed(2)}</td>
+      <td className="py-3 px-2 text-right font-mono text-sm">Bs{getDisplayedBasePrice('bs').toFixed(2)}</td>
       <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('usd').toFixed(2)}</td>
       <td className="py-3 pl-2 text-center">
         <div className="flex justify-center gap-1">
