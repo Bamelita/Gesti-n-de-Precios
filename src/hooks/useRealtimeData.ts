@@ -110,7 +110,12 @@ export function useRealtimeData(userType: 'admin' | 'worker' = 'worker', userInf
     }
 
     // Initialize socket connection (only once)
-    const newSocket = io('/?XTransformPort=3001', {
+    // Use localhost:3001 for local development, otherwise try relative path (or update for production URL)
+    const socketUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+      ? 'http://localhost:3001' 
+      : '/?XTransformPort=3001'
+
+    const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       timeout: 5000,
       reconnectionAttempts: 3
