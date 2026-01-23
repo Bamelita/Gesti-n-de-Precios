@@ -1846,7 +1846,7 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
               <div className="border-t border-white/10 pt-4 mb-4">
                 <h4 className="text-sm font-semibold text-gray-300 mb-3">Ajustes Individuales (opcional - dejar vacío para usar global)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {priceColumns.map(({ key, label, base }) => {
+                  {priceColumns.map(({ key, label, base, applyTax }) => {
                     const currentValue = (editForm as any)[`adjustment${key.charAt(0).toUpperCase() + key.slice(1)}`]
                     const isGlobal = currentValue === '' || currentValue === undefined
                     const effectiveAdjustment = isGlobal 
@@ -1858,7 +1858,7 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                       ? editForm.precioListaUsd 
                       : editForm.precioListaBs
                       
-                    const finalPrice = Math.max(0, calculatePrice(basePrice, effectiveAdjustment, currency, col.applyTax))
+                    const finalPrice = Math.max(0, calculatePrice(basePrice, effectiveAdjustment, currency, applyTax))
                     
                     return (
                       <div key={key} className="card-glass rounded-lg p-3">
