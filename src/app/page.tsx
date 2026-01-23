@@ -1288,12 +1288,9 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
                           }).catch(console.error)
                           saveTaxRate()
                       }}
-                      className="text-xs text-orange-500 hover:text-orange-400 flex items-center gap-1 font-medium transition-colors px-2"
+                      className="text-xs text-orange-500 hover:text-orange-400 font-medium transition-colors px-2"
                       title="Restablecer Impuesto y Selección"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
                       Restablecer
                     </button>
                   </div>
