@@ -71,11 +71,11 @@ const MobileProductCard = memo(function MobileProductCard({
     <div className="card-glass rounded-xl p-3 mb-3 border border-white/10 hover:bg-white/5 transition-all">
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2 overflow-hidden">
-          <h3 className="text-lg font-bold font-mono text-red-500 truncate">{product.medida}</h3>
+          <h3 className="text-lg font-bold font-mono text-white truncate drop-shadow-sm">{product.medida}</h3>
           <span className="text-xs text-gray-400 px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 shrink-0">{product.type}</span>
         </div>
         
-        {isAdmin && (
+        {isAdmin ? (
           <div className="flex gap-1 shrink-0">
             <button 
               onClick={() => openEditModal(product)}
@@ -94,6 +94,10 @@ const MobileProductCard = memo(function MobileProductCard({
               </svg>
             </button>
           </div>
+        ) : (
+          <span className="inline-block px-2 py-0.5 rounded bg-amber-500 text-black font-black text-[10px] uppercase tracking-wide">
+             Lectura
+          </span>
         )}
       </div>
 
@@ -130,10 +134,10 @@ const MobileProductCard = memo(function MobileProductCard({
           const isIndividual = Math.abs(adjustment - defaultAdj) > 0.01
           
           return (
-            <div key={type} className="bg-black/20 rounded-lg p-2 border border-white/5 flex flex-col justify-between h-full">
+            <div key={type} className="bg-black/40 rounded-lg p-2 border border-white/10 flex flex-col justify-between h-full backdrop-blur-sm">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-gray-400 text-[9px] font-bold uppercase tracking-wide truncate pr-1" title={label}>{label}</span>
-                <div className={`flex items-center ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-gray-500'}`}>
+                <span className="text-white/80 text-[9px] font-bold uppercase tracking-wide truncate pr-1" title={label}>{label}</span>
+                <div className={`flex items-center ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-white/60'}`}>
                   <span className="text-[9px] font-bold">
                     {(adjustment >= 0 ? '+' : '')}{adjustment}%
                   </span>
@@ -143,15 +147,15 @@ const MobileProductCard = memo(function MobileProductCard({
               
               <div className="flex flex-col">
                 <div className="flex justify-between items-end">
-                  <div className="text-[9px] text-gray-500 font-medium">
+                  <div className="text-[9px] text-white/60 font-medium">
                     {nativeCurrency === 'bs' ? 'L(Bs)' : 'L($)'} ${nativeBasePrice.toFixed(2)}
                   </div>
-                  <div className="text-sm font-bold font-mono text-white leading-none">
+                  <div className="text-sm font-black font-mono text-white leading-none drop-shadow-sm">
                     ${nativeFinalPrice.toFixed(2)}
                   </div>
                 </div>
                 {shouldApplyTax && (
-                   <div className="text-[8px] text-gray-500 text-right mt-0.5">
+                   <div className="text-[8px] text-white/50 text-right mt-0.5 font-medium">
                      +IVA
                    </div>
                 )}

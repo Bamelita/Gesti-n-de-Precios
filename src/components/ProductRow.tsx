@@ -69,10 +69,10 @@ const ProductRow = memo(function ProductRow({
   }
 
   return (
-    <tr key={product.id} className="border-b border-white/5 hover:bg-white/10 transition-colors">
+    <tr key={product.id} className="border-b border-white/10 hover:bg-white/10 transition-colors group">
       <td className="py-3 pr-3">
-        <div className="font-mono text-red-500 font-bold">{product.medida}</div>
-        <div className="text-sm text-gray-400">{product.type}</div>
+        <div className="font-mono text-white font-bold text-lg drop-shadow-sm">{product.medida}</div>
+        <div className="text-sm text-white/90 font-medium">{product.type}</div>
       </td>
       {(priceColumns || []).map(({ key: type, base, applyTax }) => {
         const adjustment = getEffectiveAdjustment(type)
@@ -93,21 +93,21 @@ const ProductRow = memo(function ProductRow({
 
         return (
           <td key={type} className="py-3 px-2 text-right">
-            <div className="text-xs text-gray-300 mb-0.5 font-medium">
+            <div className="text-xs text-white/70 mb-0.5 font-medium">
               Base: ${nativeBasePrice.toFixed(2)}
             </div>
-            <div className={`text-sm mb-0.5 font-bold ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-gray-400'}`}>
+            <div className={`text-sm mb-0.5 font-bold ${adjustment < 0 ? 'text-red-400' : adjustment > 0 ? 'text-green-400' : 'text-white/60'}`}>
               {(adjustment >= 0 ? '+' : '')}{adjustment}%
               {isIndividual && <span className="text-red-500 ml-1" title="Ajuste individual">●</span>}
             </div>
-            <div className="font-mono text-sm font-bold text-white">
+            <div className="font-mono text-sm font-black text-white drop-shadow-sm">
               {shouldApplyTax ? 'Total + IVA:' : 'Total:'} ${nativeFinalPrice.toFixed(2)}
             </div>
           </td>
         )
       })}
-      <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('bs').toFixed(2)}</td>
-      <td className="py-3 px-2 text-right font-mono text-sm">${getDisplayedBasePrice('usd').toFixed(2)}</td>
+      <td className="py-3 px-2 text-right font-mono text-sm text-white font-semibold">${getDisplayedBasePrice('bs').toFixed(2)}</td>
+      <td className="py-3 px-2 text-right font-mono text-sm text-white font-semibold">${getDisplayedBasePrice('usd').toFixed(2)}</td>
       <td className="py-3 pl-2 text-center">
         <div className="flex justify-center gap-1">
           {isAdmin ? (
@@ -132,7 +132,9 @@ const ProductRow = memo(function ProductRow({
               </button>
             </>
           ) : (
-            <span className="text-gray-500 text-sm">Solo lectura</span>
+            <span className="inline-block px-3 py-1.5 rounded-lg bg-amber-500 text-black font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20">
+              Solo Lectura
+            </span>
           )}
         </div>
       </td>

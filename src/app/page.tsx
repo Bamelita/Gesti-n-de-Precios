@@ -1092,8 +1092,8 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
       {/* Header */}
       <header className="text-center mb-8 pt-4">
         <div className="flex items-center justify-center gap-2 mb-2 scale-110 md:scale-125 transition-transform">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-red-600 drop-shadow-[0_2px_0_rgba(255,255,255,0.8)] flex items-center gap-1" 
-              style={{ textShadow: '2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff' }}>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white drop-shadow-[0_2px_0_rgba(255,0,0,0.8)] flex items-center gap-1" 
+              style={{ textShadow: '2px 2px 0 #dc2626, -1px -1px 0 #dc2626, 1px -1px 0 #dc2626, -1px 1px 0 #dc2626, 1px 1px 0 #dc2626' }}>
             GRUP
             <svg className="w-8 h-8 md:w-12 md:h-12 inline-block drop-shadow-lg animate-spin-slow text-white" viewBox="0 0 100 100" aria-label="O - Neumático">
               <circle cx="50" cy="50" r="45" fill="#1a1a1a" stroke="currentColor" strokeWidth="4"></circle>
@@ -1103,8 +1103,8 @@ Esto modificará la base de datos y reiniciará el contador visual a 0.`, `Confi
               <path d="M18 18 L29 29 M71 71 L82 82 M18 82 L29 71 M71 29 L82 18" stroke="currentColor" strokeWidth="4"></path>
             </svg>
           </h1>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-red-600 drop-shadow-[0_2px_0_rgba(255,255,255,0.8)]"
-              style={{ textShadow: '2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff' }}>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-white drop-shadow-[0_2px_0_rgba(255,0,0,0.8)]"
+              style={{ textShadow: '2px 2px 0 #dc2626, -1px -1px 0 #dc2626, 1px -1px 0 #dc2626, -1px 1px 0 #dc2626, 1px 1px 0 #dc2626' }}>
             CHIRICA
           </h1>
         </div>
