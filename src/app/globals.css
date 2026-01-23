@@ -123,7 +123,32 @@
 
 /* Custom styles for the app */
 .gradient-bg {
-  background: linear-gradient(135deg, #0a0a0a 0%, #1a0505 50%, #2b0000 100%);
+  /* Recreación del fondo estilo Grupo Chirica: Rojo - Negro - Blanco/Gris con textura */
+  background-color: #000000;
+  background-image: 
+    /* Capa de textura sutil */
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.02) 0px,
+      rgba(255, 255, 255, 0.02) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    /* Gradiente principal diagonal */
+    linear-gradient(
+      135deg,
+      #7f1d1d 0%,    /* Rojo oscuro (esquina superior izquierda) */
+      #dc2626 25%,   /* Rojo intenso */
+      #000000 40%,   /* Transición a negro */
+      #000000 60%,   /* Banda negra central */
+      #9ca3af 85%,   /* Gris */
+      #e5e5e5 100%   /* Blanco/Gris claro (esquina inferior derecha) */
+    );
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-attachment: fixed;
+  min-height: 100vh;
 }
 
 .card-glass {
