@@ -2,14 +2,20 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://spyodxdqweqcxhcauqyq.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_XEp4zZ6afjpX0Edw356Mtw_q5i17QLE'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Create an admin client if the service key is available (Server-side only)
+const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey) 
+  : supabase
 
 // Database helper functions
 export const db = {
   // Products
   async getProducts() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('products')
       .select('*')
       .order('createdAt', { ascending: false })
@@ -19,7 +25,7 @@ export const db = {
   },
 
   async createProduct(product: any) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('products')
       .insert([product])
       .select()
@@ -29,7 +35,7 @@ export const db = {
   },
 
   async updateProduct(id: string, updates: any) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('products')
       .update(updates)
       .eq('id', id)
@@ -40,7 +46,7 @@ export const db = {
   },
 
   async deleteProduct(id: string) {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('products')
       .delete()
       .eq('id', id)
@@ -50,7 +56,7 @@ export const db = {
 
   // Settings
   async getSettings() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('settings')
       .select('*')
       .order('settingKey', { ascending: true })
@@ -60,7 +66,7 @@ export const db = {
   },
 
   async createSetting(setting: any) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('settings')
       .insert([setting])
       .select()
@@ -70,7 +76,7 @@ export const db = {
   },
 
   async updateSetting(key: string, updates: any) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('settings')
       .update(updates)
       .eq('settingKey', key)
@@ -81,7 +87,7 @@ export const db = {
   },
 
   async upsertSetting(setting: any) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('settings')
       .upsert(setting, { onConflict: 'settingKey' })
       .select()
