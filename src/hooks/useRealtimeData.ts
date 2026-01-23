@@ -123,7 +123,17 @@ export function useRealtimeData(userType: 'admin' | 'worker' = 'worker', userInf
         setConnectedUsers(users)
       })
       .on('broadcast', { event: 'kick-user' }, (payload) => {
-        if (payload.targetId === sessionId) {
+        // Check if I am the target (by Identity OR by Session ID)
+        const isIdentityMatch = 
+            payload.targetName && 
+            payload.targetName === userInfo?.name &&
+            payload.targetLastName && 
+            payload.targetLastName === userInfo?.lastName &&
+            payload.targetUserType === userType;
+            
+        const isIdMatch = payload.targetId === sessionId;
+
+        if (isIdentityMatch || isIdMatch) {
            console.warn('You have been kicked!')
            localStorage.removeItem('user_type')
            localStorage.removeItem('user_info')
@@ -131,7 +141,15 @@ export function useRealtimeData(userType: 'admin' | 'worker' = 'worker', userInf
         }
       })
       .on('broadcast', { event: 'remove-admin' }, (payload) => {
-         if (payload.targetId === sessionId) {
+         const isIdentityMatch = 
+            payload.targetName && 
+            payload.targetName === userInfo?.name &&
+            payload.targetLastName && 
+            payload.targetLastName === userInfo?.lastName;
+            
+         const isIdMatch = payload.targetId === sessionId;
+
+         if (isIdentityMatch || isIdMatch) {
              console.warn('Admin privileges removed!')
              localStorage.removeItem('user_type')
              localStorage.removeItem('user_info')
@@ -195,19 +213,21 @@ export function useRealtimeData(userType: 'admin' | 'worker' = 'worker', userInf
         }
         
         if (event === 'kick-user') {
+            const msgPayload = typeof payload === 'string' ? { targetId: payload } : payload
             await newChannel.send({
                 type: 'broadcast',
                 event: 'kick-user',
-                payload: { targetId: payload }
+                payload: msgPayload
             })
             listeners['kick-success']?.forEach(cb => cb('Usuario expulsado correctamente'))
         }
 
         if (event === 'remove-admin') {
+            const msgPayload = typeof payload === 'string' ? { targetId: payload } : payload
             await newChannel.send({
                 type: 'broadcast',
                 event: 'remove-admin',
-                payload: { targetId: payload }
+                payload: msgPayload
             })
             listeners['remove-admin-success']?.forEach(cb => cb('Administrador removido correctamente'))
         }

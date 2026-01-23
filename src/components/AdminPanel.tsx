@@ -74,44 +74,56 @@ export default function AdminPanel({ socket, currentUser, connectedUsers: propCo
     })
   }
 
-  const handleRemoveAdmin = async (targetSocketId: string, targetName: string) => {
+  const handleRemoveAdmin = async (targetSocketId: string, user: ConnectedUser) => {
     if (!canChangePassword) {
       showAlert('No tienes permiso para remover administradores. Solo los administradores principales pueden hacer esto.', 'Permiso Denegado')
       return
     }
 
+    const targetName = formatName(user.name, user.lastName)
     if (!await showConfirm(`¿Estás seguro de que quieres remover a ${targetName} como administrador?`, 'Confirmar Eliminación')) {
       return
     }
 
-    socket.emit('remove-admin', targetSocketId)
+    socket.emit('remove-admin', {
+      targetId: targetSocketId,
+      targetName: user.name,
+      targetLastName: user.lastName,
+      targetUserType: user.userType
+    })
 
-    socket.on('remove-admin-success', (msg) => {
+    socket.on('remove-admin-success', (msg: string) => {
       showAlert(msg, 'Éxito')
     })
 
-    socket.on('remove-admin-error', (errorMsg) => {
+    socket.on('remove-admin-error', (errorMsg: string) => {
       showAlert(errorMsg, 'Error')
     })
   }
 
-  const handleKickWorker = async (targetSocketId: string, targetName: string) => {
+  const handleKickWorker = async (targetSocketId: string, user: ConnectedUser) => {
     if (!isSuperAdmin) {
       showAlert('Solo los super administradores pueden sacar trabajadores.', 'Error')
       return
     }
 
+    const targetName = formatName(user.name, user.lastName)
     if (!await showConfirm(`¿Estás seguro de que quieres sacar a ${targetName} de la sesión?`, 'Confirmar')) {
       return
     }
 
-    socket.emit('kick-user', targetSocketId)
+    socket.emit('kick-user', {
+      targetId: targetSocketId,
+      targetName: user.name,
+      targetLastName: user.lastName,
+      targetUserType: user.userType
+    })
 
-    socket.on('kick-success', (msg) => {
+    socket.on('kick-success', (msg: string) => {
       showAlert(msg, 'Éxito')
     })
 
-    socket.on('kick-error', (errorMsg) => {
+    socket.on('kick-error', (errorMsg: string) => {
       showAlert(errorMsg, 'Error')
     })
   }
@@ -274,7 +286,7 @@ export default function AdminPanel({ socket, currentUser, connectedUsers: propCo
                 <div className="flex gap-2">
                   {user.userType === 'worker' && (
                     <button
-                      onClick={() => handleKickWorker(user.id, formatName(user.name, user.lastName))}
+                      onClick={() => handleKickWorker(user.id, user)}
                       className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all border border-red-500/20"
                       title="Sacar trabajador"
                     >
@@ -285,7 +297,7 @@ export default function AdminPanel({ socket, currentUser, connectedUsers: propCo
                   )}
                   {user.userType === 'admin' && isSuperAdmin && (
                     <button
-                      onClick={() => handleRemoveAdmin(user.id, formatName(user.name, user.lastName))}
+                      onClick={() => handleRemoveAdmin(user.id, user)}
                       className="p-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-xs transition-all border border-orange-500/20"
                       title="Degradar admin"
                     >
